@@ -8,6 +8,7 @@ format:
 fig-height: 3.5
 fig-width: 6
 ---
+[Link to my GitHub repository](https://github.com/bigturtle13/GSB544)
 
 This dataset contains a subset of the fuel economy data from the EPA.
 
