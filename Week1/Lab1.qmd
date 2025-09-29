@@ -2,6 +2,7 @@
 title: "Lab 1"
 format:
   html:
+    theme : cosmo
     code-fold: true
     embed-resources: true
 execute:
