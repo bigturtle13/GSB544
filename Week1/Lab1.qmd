@@ -21,10 +21,14 @@ Identify, and list here, what aesthetics are being used and which variables are 
 
 Aesthetics beings used: X, Y, Size, Fill
 
-Which variables mapped to each aesthetic: 
+Which variables mapped to each aesthetic:
+
 X = income("income")
+
 Y = life expectancy("life_exp")
+
 size = population("population")
+
 fill = Four Regions("four_regions")
 
 ```{python}
@@ -121,9 +125,13 @@ Identify, and list here, what aesthetics are being used and which variables are 
 Aesthetics beings used: X, Y, Size, Fill
 
 Which variables mapped to each aesthetic: 
+
 X = exports("exports")
+
 Y = imports("imports")
+
 size = energy("fixenergy")
+
 fill = Four Regions("four_regions")
 
 ```{python}
@@ -217,9 +225,13 @@ Identify, and list here, what aesthetics are being used and which variables are 
 Aesthetics beings used: X, Y, Size, Fill
 
 Which variables mapped to each aesthetic: 
+
 X = Individuals Using the Internet("internet_users")
+
 Y = GDP/capita("gdp")
+
 size = income("income")
+
 fill = Four Regions("four_regions")
 
 ```{python}
