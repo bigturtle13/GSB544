@@ -1,0 +1,262 @@
+---
+title: "Lab 3"
+format:
+  html:
+    theme : cosmo
+    code-fold: true
+    embed-resources: true
+execute:
+    echo: true
+---
+
+[Link to my Github Repository](https://github.com/bigturtle13/GSB544/tree/main/Week%203)
+
+```{python}
+
+import pandas as pd
+import numpy as np
+xmas = pd.read_csv("https://www.dropbox.com/scl/fi/qxaslqqp5p08i1650rpc4/xmas.csv?rlkey=erdxi7jbh7pqf9fh4lv4cayp5&dl=1")
+
+```
+
+Function 1: pluralize_gift()
+```{python}
+
+def pluralize_gift(gift):
+  """
+
+  Returns plural of a noun
+  
+  take in a noun:
+  gift: str 
+    
+  Return Plural version of a:
+  str
+
+  Run like pluralize_gift(goose) 
+  Returns "geese"
+    
+  """
+  if isinstance(gift, pd.Series):
+    return gift.apply(pluralize_gift) 
+
+  if "oo" in gift:
+    gift = gift.replace("oo", "ee") #replaces words like goose with geese
+  elif gift.endswith("y"):
+    gift = gift[:-1] + "ies" #removes the y and pluralizes with ies
+  else:
+    gift = gift + "s" #adds a s to pluralize
+
+  return gift
+```
+
+
+Test Your Function
+```{python}
+
+# Should work
+pluralize_gift("goose")
+
+# Will work if your function is vectorized! 
+pluralize_gift(xmas['Gift.Item']) # method that works with .apply built into function, vectorized function
+
+#xmas['Gift.Item'].apply(pluralize_gift) # method that works without the .apply
+
+```
+
+Function 2: make_phrase()
+
+```{python}
+def make_phrase(num, num_word, item, verb, adjective, location):
+    # Step 1: replace NAs with blank strings
+    #these three if else statements are used to replace NAs in these columns
+    if isinstance(verb, pd.Series):
+        verb = verb.apply(lambda v: str(v) if pd.notna(v) else "")
+    else:
+        verb = str(verb) if pd.notna(verb) else ""
+
+    if isinstance(adjective, pd.Series):
+        adjective = adjective.apply(lambda v: str(v) if pd.notna(v) else "")
+    else:
+        adjective = str(adjective) if pd.notna(adjective) else ""
+
+    if isinstance(location, pd.Series):
+        location = location.apply(lambda v: str(v) if pd.notna(v) else "")
+    else:
+        location = str(location) if pd.notna(location) else ""
+
+
+    if isinstance(item, pd.Series): #checks if the gift is pandas series 
+
+        ## Step 2: If the day number is larger than 1, the gift items need pluralized!
+        item_final = pd.Series(np.where(num == 1, item, pluralize_gift(item)), index=item.index)
+        ## Step 3: Figure out if a gift item starts with a vowel, used for "a", "an"
+        starts_v = item.str[0].str.lower().isin(list("aeiou"))
+        ## Step 4: For the first day, if the gift item starts with a vowel, replace the day with "an" and if the gift item does not start with a vowel, replace the day with "a" (e.g. a partridge in a pear tree). If it is not the first day, use just the number word (e.g. ten lords a leap)
+        # if it's day 1: use "a" or "an" depending on the vowel check
+        # otherwise: use the written out number word 
+        qty = pd.Series(np.where(num == 1, np.where(starts_v, "an", "a"), num_word), index=item.index)
+        
+
+        ## Step 5: Put all of the pieces together into one string and return!
+        # join quantity, adjective, item, verb, and location with spaces(" ")
+        # Replaces any sequence of whitespace (tabs, multiple spaces, extra space, etc.) with a single space or remove the space
+        phrase = (qty.astype(str) + " " +
+                  adjective.astype(str) + " " +
+                  item_final.astype(str) + " " +
+                  verb.astype(str) + " " +
+                  location.astype(str))
+        return phrase.str.replace(r"\s+", " ", regex=True).str.strip()
+
+```
+
+```{python}
+#dictionary that maps day numbers to their word versions
+num_words_map = {1:"one",
+    2:"two",
+    3:"three",
+    4:"four",
+    5:"five",
+    6:"six",
+    7:"seven",
+    8:"eight",
+    9:"nine",
+    10:"ten",
+    11:"eleven",
+    12:"twelve"
+}
+
+#Creates column 'Num.Word' by mapping each day number in 'Day' to its corresponding word from the dictionary 
+xmas["Num.Word"] = xmas["Day"].map(num_words_map)
+
+#make_phrase() function builds the full gift phrase for each gift
+xmas["Full.Phrase"] = make_phrase(
+    num = xmas["Day"],
+    num_word = xmas["Num.Word"],
+    item = xmas["Gift.Item"],
+    verb = xmas["Verb"],
+    adjective = xmas["Adjective"],
+    location = xmas["Location"]
+)
+
+#Print a clean table showing the day number and the full phrase, removes the row index from printed output(looks way cleaner)
+print(xmas[["Day", "Full.Phrase"]].to_string(index=False))
+```
+
+```{python}
+
+def sing_day(dataset, num, phrase_col):
+    """
+    Generates the lyrics for a specific day of 'The 12 Days of Christmas' song.
+
+    Takes in:
+    dataset(xmas for this)
+        The full xmas dataset containing all the gift info and phrases.
+    num(int)
+        The day of Christmas to sing (1–12).
+    phrase_col(str)
+        The column name in the dataset that contains the full phrase for each gift.
+
+    Returns a str
+        string with the full verse for the specified day.
+
+    Run like sing_day(xmas, 8, "Full.Phrase")
+    Returns 
+    "On the eighth day of Christmas, my true love sent to me:
+    eight maids a-milking,
+    seven swans a-swimming,
+    six geese a-laying,
+    five golden rings,
+    four calling birds,
+    three french hens,
+    two turtle doves,
+    and a partridge in a pear tree."
+    
+    """
+
+    # Step 1: Setup the intro line
+    # Map numeric day to its ordinal word(like 1 to first)
+    day_word_map = {
+        1: "first",
+        2: "second",
+        3: "third",
+        4: "fourth",
+        5: "fifth",
+        6: "sixth",
+        7: "seventh",
+        8: "eighth",
+        9: "ninth",
+        10: "tenth",
+        11: "eleventh",
+        12: "twelfth"
+    }
+    num_word = day_word_map[num]  # convert number to word
+    intro = f"On the {num_word} day of Christmas, my true love sent to me:"
+
+    # Step 2: Sing the gift phrases
+    # For each day, sing that day's gift plus all previous days
+    gifts = ""
+
+    # loop backward from the current day down to 1
+    for i in range(num, 0, -1):
+        gift_phrase = dataset.loc[dataset["Day"] == i, phrase_col].values[0]
+
+        # For the last line(gift day 1), add "and" if more than 1 day
+        if i == 1 and num > 1:
+            #prefix it with "and", does not add comma
+            gifts += "and " + gift_phrase
+        elif i != 1:
+            #if not day 1 add a new line with comma before it
+            gifts += gift_phrase + ",\n"
+        else:
+            # add the phrase followed by a newline 
+            gifts += gift_phrase + "\n"
+
+    # Step 3: Put it all together and return
+    # adds together the into phrase and a new line with the gifts string that strips any extra or white space and adds period for grammar at end
+    song = intro + "\n" + gifts.strip() + "."
+    
+    #print the complete song for whichever day when called
+    print(song)
+
+```
+
+```{python}
+#test the complete function
+sing_day(xmas, 8, "Full.Phrase")
+```
+
+```{python}
+xmas2 = pd.read_csv("https://www.dropbox.com/scl/fi/p9x9k8xwuzs9rhp582vfy/xmas_2.csv?rlkey=kvc3j3lmyn4opcidsrhcmrof1&dl=1")
+
+#Num.Word for xmas2
+num_words_map = {
+    1:"one", 
+    2:"two", 
+    3:"three", 
+    4:"four", 
+    5:"five",
+    6:"six", 
+    7:"seven", 
+    8:"eight", 
+    9:"nine", 
+    10:"ten",
+    11:"eleven", 
+    12:"twelve"
+}
+
+xmas2["Num.Word"] = xmas2["Day"].map(num_words_map)
+
+# Full.Phrase for xmas2
+xmas2["Full.Phrase"] = make_phrase(
+    num = xmas2["Day"],
+    num_word = xmas2["Num.Word"],
+    item = xmas2["Gift.Item"],
+    verb = xmas2["Verb"],
+    adjective = xmas2["Adjective"],
+    location = xmas2["Location"]
+)
+
+#test the complete function with the xmas2 dataset
+sing_day(xmas2, 8, "Full.Phrase")
+```
