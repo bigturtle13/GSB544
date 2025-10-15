@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.24">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>XML, HTML, and Web Scraping</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="Practice_Activity_4_1_Webscraping_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Practice_Activity_4_1_Webscraping_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="Practice_Activity_4_1_Webscraping_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="Practice_Activity_4_1_Webscraping_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="Practice_Activity_4_1_Webscraping_files/libs/quarto-html/popper.min.js"></script>
+<script src="Practice_Activity_4_1_Webscraping_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Practice_Activity_4_1_Webscraping_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Practice_Activity_4_1_Webscraping_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Practice_Activity_4_1_Webscraping_files/libs/quarto-html/quarto-syntax-highlighting-dc55a5b9e770e841cd82e46aadbfb9b0.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Practice_Activity_4_1_Webscraping_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Practice_Activity_4_1_Webscraping_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Practice_Activity_4_1_Webscraping_files/libs/bootstrap/bootstrap-d6a003b94517c951b2d65075d42fb01b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">XML, HTML, and Web Scraping</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>JSON and XML are two different ways to represent hierarchical data. Which one is better? There are lots of articles online which discuss similarities and differences between JSON and XML and their advantages and disadvantages. Both formats are still in current usage, so it is good to be familiar with both. However, JSON is more common, so we’ll focus on working with JSON representations of hierarchical data.</p>
+<p>The reading covered an example of using Beautiful Soup to parse XML. Rather than doing another example XML now, we’ll skip straight to scraping HTML from a webpage. Both HTML and XML can be parsed in a similar way with Beautiful Soup.</p>
+<div id="cell-2" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<section id="scraping-an-html-table-with-beautiful-soup" class="level2">
+<h2 class="anchored" data-anchor-id="scraping-an-html-table-with-beautiful-soup">Scraping an HTML table with Beautiful Soup</h2>
+<p>Open the URL https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population and scroll down until you see a table of the cities in the U.S. with population over 100,000 (as of Jul 1, 2022). We’ll use Beautiful Soup to scrape information from this table.</p>
+<p>Read in the HTML from the ULR using the <code>requests</code> library.</p>
+<div id="cell-6" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># YOUR CODE HERE</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="co">#response = requests.get("https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population")</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>URL <span class="op">=</span> <span class="st">"https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population"</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>HEADERS <span class="op">=</span> {<span class="st">"User-Agent"</span>: <span class="st">"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"</span>}</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(URL, headers<span class="op">=</span>HEADERS)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>Use Beautiful Soup to parse this string into a tree called <code>soup</code></p>
+<div id="cell-8" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># YOUR CODE HERE</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> bs4 <span class="im">import</span> BeautifulSoup</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(response.text, <span class="st">"html.parser"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>To find an HTML tag corresponding to a specific element on a webpage, right-click on it and choose “Inspect element”. Go to the cities table Wikipedia page and do this now.</p>
+<p>You should find that the cities table on the Wikipedia page corresponds to the element</p>
+<pre><code>&lt;table class="wikitable sortable jquery-tablesorter" style="text-align:center"&gt;</code></pre>
+<p>There are many <code>&lt;table&gt;</code> tags on the page.</p>
+<div id="cell-11" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}}" data-outputid="fe9860ae-69de-4a66-a733-b584dbe0b266">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(soup.find_all(<span class="st">"table"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="5">
+<pre><code>10</code></pre>
+</div>
+</div>
+<p>We can use attributes like <code>class=</code> and <code>style=</code> to narrow down the list.</p>
+<div id="cell-13" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}}" data-outputid="90deecee-1452-446e-b136-909ddb23cd29">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="bu">len</span>(soup.find_all(<span class="st">"table"</span>,</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>                  attrs<span class="op">=</span>{</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>                      <span class="st">"class"</span>: <span class="st">"sortable wikitable sticky-header-multi static-row-numbers sort-under col1left col2center"</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>                      <span class="st">"style"</span>: <span class="st">"text-align:right"</span>}</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>                  ))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="6">
+<pre><code>1</code></pre>
+</div>
+</div>
+<p>At this point, you can manually inspect the tables on the webpage to find that the one we want is the first one (see <code>[0]</code> below). We’ll store this as <code>table</code>.</p>
+<div id="cell-15" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>table <span class="op">=</span> soup.find_all(<span class="st">"table"</span>,</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>                  attrs<span class="op">=</span>{</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>                      <span class="st">"class"</span>: <span class="st">"sortable wikitable sticky-header-multi static-row-numbers sort-under col1left col2center"</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>                      <span class="st">"style"</span>: <span class="st">"text-align:right"</span>}</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>                  )[<span class="dv">0</span>]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p><strong>Now you will write code to scrape the information in <code>table</code> to create a Pandas data frame with one row for each city and columns for: city, state, population (2022 estimate), and 2020 land area (sq mi).</strong> Refer to the Notes/suggestions below as you write your code. A few Hints are provided further down, but try coding first before looking at the hints.</p>
+<p>Notes/suggestions:</p>
+<ul>
+<li>Use as a guide the code from the reading that produced the data frame of Statistics faculty</li>
+<li>Inspect the page source as you write your code</li>
+<li>You will need to write a loop to get the information for all cities, but you might want to try just scraping the info for New York first</li>
+<li>You will need to pull the text from the tag. If <code>.text</code> returns text with “” at the end, try <code>.get_text(strip = True)</code> instead of <code>.text</code></li>
+<li>Don’t forget to convert to a Pandas Data Frame; it should have 333 rows and 4 columns</li>
+<li>The goal of this exercise is just to create the Data Frame. If you were going to use it — e.g., what is the population density for all cities in CA? — then you would need to clean the data first (to clean strings and convert to quantitative). (You can use Beautiful Soup to do some of the cleaning for you, but that goes beyond our scope.)</li>
+</ul>
+<div id="cell-18" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:423}}" data-outputid="f9b876aa-be17-4092-b76f-d0bc5ef148bb">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># YOUR CODE HERE. ADD AS MANY CELLS AS NEEDED</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> []</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> row <span class="kw">in</span> table.find_all(<span class="st">"tr"</span>)[<span class="dv">1</span>:]:</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    cells <span class="op">=</span> row.find_all(<span class="st">"td"</span>)</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="bu">len</span>(cells) <span class="op">==</span> <span class="dv">0</span>:</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>      <span class="cf">continue</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>    cityname <span class="op">=</span> cells[<span class="dv">0</span>].find(<span class="st">"a"</span>)</span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>    name <span class="op">=</span> cityname.get_text(strip<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>    statename <span class="op">=</span> cells[<span class="dv">1</span>].find(<span class="st">"a"</span>)</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>    sname <span class="op">=</span> statename.get_text(strip<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>    estimate <span class="op">=</span> cells[<span class="dv">2</span>]</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>    estimatetotal <span class="op">=</span> estimate.get_text(strip<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>    census <span class="op">=</span> cells[<span class="dv">5</span>]</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>    censusmi <span class="op">=</span> census.get_text(strip<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>    rows.append({</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>        <span class="st">"city"</span>: name,</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>        <span class="st">"state"</span>: sname,</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>        <span class="st">"2024 population estimate"</span>: estimatetotal,</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>        <span class="st">"2020 land area"</span>: censusmi</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>    })</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>rows</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(rows)</span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="8">
+<div id="df-444f7bd1-8448-4883-93e6-c86400923e5c" class="colab-df-container">
+    <div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">city</th>
+<th data-quarto-table-cell-role="th">state</th>
+<th data-quarto-table-cell-role="th">2024 population estimate</th>
+<th data-quarto-table-cell-role="th">2020 land area</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>New York</td>
+<td>NY</td>
+<td>8,478,072</td>
+<td>300.5</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>Los Angeles</td>
+<td>CA</td>
+<td>3,878,704</td>
+<td>469.5</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2</th>
+<td>Chicago</td>
+<td>IL</td>
+<td>2,721,308</td>
+<td>227.7</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">3</th>
+<td>Houston</td>
+<td>TX</td>
+<td>2,390,125</td>
+<td>640.4</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">4</th>
+<td>Phoenix</td>
+<td>AZ</td>
+<td>1,673,164</td>
+<td>518.0</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">...</th>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">341</th>
+<td>Deltona</td>
+<td>FL</td>
+<td>100,513</td>
+<td>37.3</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">342</th>
+<td>Federal Way</td>
+<td>WA</td>
+<td>100,252</td>
+<td>22.3</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">343</th>
+<td>San Angelo</td>
+<td>TX</td>
+<td>100,159</td>
+<td>59.7</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">344</th>
+<td>Tracy</td>
+<td>CA</td>
+<td>100,136</td>
+<td>25.9</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">345</th>
+<td>Sunrise</td>
+<td>FL</td>
+<td>100,128</td>
+<td>16.2</td>
+</tr>
+</tbody>
+</table>
+
+<p>346 rows × 4 columns</p>
+</div>
+    <div class="colab-df-buttons">
+
+  <div class="colab-df-container">
+    <button class="colab-df-convert" onclick="convertToInteractive('df-444f7bd1-8448-4883-93e6-c86400923e5c')" title="Convert this dataframe to an interactive table." style="display:none;">
+
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewbox="0 -960 960 960">
+    <path d="M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z"></path>
+  </svg>
+    </button>
+
+  <style>
+    .colab-df-container {
+      display:flex;
+      gap: 12px;
+    }
+
+    .colab-df-convert {
+      background-color: #E8F0FE;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      fill: #1967D2;
+      height: 32px;
+      padding: 0 0 0 0;
+      width: 32px;
+    }
+
+    .colab-df-convert:hover {
+      background-color: #E2EBFA;
+      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);
+      fill: #174EA6;
+    }
+
+    .colab-df-buttons div {
+      margin-bottom: 4px;
+    }
+
+    [theme=dark] .colab-df-convert {
+      background-color: #3B4455;
+      fill: #D2E3FC;
+    }
+
+    [theme=dark] .colab-df-convert:hover {
+      background-color: #434B5C;
+      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
+      fill: #FFFFFF;
+    }
+  </style>
+
+    <script>
+      const buttonEl =
+        document.querySelector('#df-444f7bd1-8448-4883-93e6-c86400923e5c button.colab-df-convert');
+      buttonEl.style.display =
+        google.colab.kernel.accessAllowed ? 'block' : 'none';
+
+      async function convertToInteractive(key) {
+        const element = document.querySelector('#df-444f7bd1-8448-4883-93e6-c86400923e5c');
+        const dataTable =
+          await google.colab.kernel.invokeFunction('convertToInteractive',
+                                                    [key], {});
+        if (!dataTable) return;
+
+        const docLinkHtml = 'Like what you see? Visit the ' +
+          '<a target="_blank" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'
+          + ' to learn more about interactive tables.';
+        element.innerHTML = '';
+        dataTable['output_type'] = 'display_data';
+        await google.colab.output.renderOutput(dataTable, element);
+        const docLink = document.createElement('div');
+        docLink.innerHTML = docLinkHtml;
+        element.appendChild(docLink);
+      }
+    </script>
+  </div>
+
+
+    <div id="df-39fa55ac-941b-4351-8f7c-bdb7923c8010">
+      <button class="colab-df-quickchart" onclick="quickchart('df-39fa55ac-941b-4351-8f7c-bdb7923c8010')" title="Suggest charts" style="display:none;">
+
+<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewbox="0 0 24 24" width="24px">
+    <g>
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"></path>
+    </g>
+</svg>
+      </button>
+
+<style>
+  .colab-df-quickchart {
+      --bg-color: #E8F0FE;
+      --fill-color: #1967D2;
+      --hover-bg-color: #E2EBFA;
+      --hover-fill-color: #174EA6;
+      --disabled-fill-color: #AAA;
+      --disabled-bg-color: #DDD;
+  }
+
+  [theme=dark] .colab-df-quickchart {
+      --bg-color: #3B4455;
+      --fill-color: #D2E3FC;
+      --hover-bg-color: #434B5C;
+      --hover-fill-color: #FFFFFF;
+      --disabled-bg-color: #3B4455;
+      --disabled-fill-color: #666;
+  }
+
+  .colab-df-quickchart {
+    background-color: var(--bg-color);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    fill: var(--fill-color);
+    height: 32px;
+    padding: 0;
+    width: 32px;
+  }
+
+  .colab-df-quickchart:hover {
+    background-color: var(--hover-bg-color);
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+    fill: var(--button-hover-fill-color);
+  }
+
+  .colab-df-quickchart-complete:disabled,
+  .colab-df-quickchart-complete:disabled:hover {
+    background-color: var(--disabled-bg-color);
+    fill: var(--disabled-fill-color);
+    box-shadow: none;
+  }
+
+  .colab-df-spinner {
+    border: 2px solid var(--fill-color);
+    border-color: transparent;
+    border-bottom-color: var(--fill-color);
+    animation:
+      spin 1s steps(1) infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      border-color: transparent;
+      border-bottom-color: var(--fill-color);
+      border-left-color: var(--fill-color);
+    }
+    20% {
+      border-color: transparent;
+      border-left-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+    }
+    30% {
+      border-color: transparent;
+      border-left-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+      border-right-color: var(--fill-color);
+    }
+    40% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+    }
+    60% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+    }
+    80% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+      border-bottom-color: var(--fill-color);
+    }
+    90% {
+      border-color: transparent;
+      border-bottom-color: var(--fill-color);
+    }
+  }
+</style>
+
+      <script>
+        async function quickchart(key) {
+          const quickchartButtonEl =
+            document.querySelector('#' + key + ' button');
+          quickchartButtonEl.disabled = true;  // To prevent multiple clicks.
+          quickchartButtonEl.classList.add('colab-df-spinner');
+          try {
+            const charts = await google.colab.kernel.invokeFunction(
+                'suggestCharts', [key], {});
+          } catch (error) {
+            console.error('Error during call to suggestCharts:', error);
+          }
+          quickchartButtonEl.classList.remove('colab-df-spinner');
+          quickchartButtonEl.classList.add('colab-df-quickchart-complete');
+        }
+        (() => {
+          let quickchartButtonEl =
+            document.querySelector('#df-39fa55ac-941b-4351-8f7c-bdb7923c8010 button');
+          quickchartButtonEl.style.display =
+            google.colab.kernel.accessAllowed ? 'block' : 'none';
+        })();
+      </script>
+    </div>
+
+    </div>
+  </div>
+</div>
+</div>
+<p>Hints:</p>
+<ul>
+<li>Each city is a row in the table; find all the <code>&lt;tr&gt;</code> tags to find all the cities</li>
+<li>Look for the <code>&lt;td&gt;</code> tag to see table entries within a row</li>
+<li>The rank column is represented by <code>&lt;th&gt;</code> tags, rather than <code>&lt;td&gt;</code> tags. So within a row, the first (that is, <code>[0]</code>) <code>&lt;td&gt;</code> tag corresponds to the city name.</li>
+</ul>
+</section>
+<section id="aside-scraping-an-html-table-with-pandas" class="level2">
+<h2 class="anchored" data-anchor-id="aside-scraping-an-html-table-with-pandas">Aside: Scraping an HTML table with Pandas</h2>
+<p>The Pandas command <code>read_html</code> can be used to scrape information from an HTML table on a webpage.</p>
+<p>We can call <code>read_html</code> on the URL.</p>
+<div id="cell-22" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co">#URL = "https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population"</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a><span class="co">#HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="co">#response = requests.get(URL, headers=HEADERS)</span></span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a><span class="co">#table = pd.read_html(response.text)</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a><span class="co">#print(len(table))</span></span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a><span class="co">#Professor Bodwin said to skip this section</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<p>However, this scrapes all the tables on the webpage, not just the one we want. As with Beautiful Soup, we can narrow the search by specifying the table attributes.</p>
+<div id="cell-24" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:287}}" data-outputid="89584c0c-0455-4622-e944-079690ec2ffd">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co">#pd.read_html("https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population", attrs = {'class': 'wikitable sortable', "style": "text-align:center"})</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a><span class="co">#Professor Bodwin said to skip this section</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<div class="ansi-escaped-output">
+<pre><span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">HTTPError</span>                                 Traceback (most recent call last)
+<span class="ansi-green-fg">/tmp/ipython-input-33552102.py</span> in <span class="ansi-cyan-fg">&lt;cell line: 0&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-fg">----&gt; 1</span><span class="ansi-red-fg"> </span>pd<span class="ansi-blue-fg">.</span>read_html<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">"https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population"</span><span class="ansi-blue-fg">,</span> attrs <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">{</span><span class="ansi-blue-fg">'class'</span><span class="ansi-blue-fg">:</span> <span class="ansi-blue-fg">'wikitable sortable'</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">"style"</span><span class="ansi-blue-fg">:</span> <span class="ansi-blue-fg">"text-align:center"</span><span class="ansi-blue-fg">}</span><span class="ansi-blue-fg">)</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">read_html</span><span class="ansi-blue-fg">(io, match, flavor, header, index_col, skiprows, attrs, parse_dates, thousands, encoding, decimal, converters, na_values, keep_default_na, displayed_only, extract_links, dtype_backend, storage_options)</span>
+<span class="ansi-green-fg ansi-bold">   1238</span>         )
+<span class="ansi-green-fg ansi-bold">   1239</span> 
+<span class="ansi-green-fg">-&gt; 1240</span><span class="ansi-red-fg">     return _parse(
+</span><span class="ansi-green-fg ansi-bold">   1241</span>         flavor<span class="ansi-blue-fg">=</span>flavor<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg ansi-bold">   1242</span>         io<span class="ansi-blue-fg">=</span>io<span class="ansi-blue-fg">,</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">_parse</span><span class="ansi-blue-fg">(flavor, io, match, attrs, encoding, displayed_only, extract_links, storage_options, **kwargs)</span>
+<span class="ansi-green-fg ansi-bold">    981</span> 
+<span class="ansi-green-fg ansi-bold">    982</span>         <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 983</span><span class="ansi-red-fg">             </span>tables <span class="ansi-blue-fg">=</span> p<span class="ansi-blue-fg">.</span>parse_tables<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    984</span>         <span class="ansi-green-fg">except</span> ValueError <span class="ansi-green-fg">as</span> caught<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    985</span>             <span class="ansi-red-fg"># if `io` is an io-like object, check if it's seekable</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">parse_tables</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-fg ansi-bold">    247</span>         list of parsed <span class="ansi-blue-fg">(</span>header<span class="ansi-blue-fg">,</span> body<span class="ansi-blue-fg">,</span> footer<span class="ansi-blue-fg">)</span> tuples <span class="ansi-green-fg">from</span> tables<span class="ansi-blue-fg">.</span>
+<span class="ansi-green-fg ansi-bold">    248</span>         """
+<span class="ansi-green-fg">--&gt; 249</span><span class="ansi-red-fg">         </span>tables <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>_parse_tables<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>_build_doc<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">.</span>match<span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">.</span>attrs<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    250</span>         <span class="ansi-green-fg">return</span> <span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>_parse_thead_tbody_tfoot<span class="ansi-blue-fg">(</span>table<span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">for</span> table <span class="ansi-green-fg">in</span> tables<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    251</span> 
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">_build_doc</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-fg ansi-bold">    804</span>                     <span class="ansi-green-fg">pass</span>
+<span class="ansi-green-fg ansi-bold">    805</span>             <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 806</span><span class="ansi-red-fg">                 </span><span class="ansi-green-fg">raise</span> e
+<span class="ansi-green-fg ansi-bold">    807</span>         <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    808</span>             <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> hasattr<span class="ansi-blue-fg">(</span>r<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">"text_content"</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">_build_doc</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-fg ansi-bold">    783</span>         <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    784</span>             <span class="ansi-green-fg">if</span> is_url<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>io<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 785</span><span class="ansi-red-fg">                 with get_handle(
+</span><span class="ansi-green-fg ansi-bold">    786</span>                     self<span class="ansi-blue-fg">.</span>io<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">"r"</span><span class="ansi-blue-fg">,</span> storage_options<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>storage_options
+<span class="ansi-green-fg ansi-bold">    787</span>                 ) as f:
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/common.py</span> in <span class="ansi-cyan-fg">get_handle</span><span class="ansi-blue-fg">(path_or_buf, mode, encoding, compression, memory_map, is_text, errors, storage_options)</span>
+<span class="ansi-green-fg ansi-bold">    726</span> 
+<span class="ansi-green-fg ansi-bold">    727</span>     <span class="ansi-red-fg"># open URLs</span>
+<span class="ansi-green-fg">--&gt; 728</span><span class="ansi-red-fg">     ioargs = _get_filepath_or_buffer(
+</span><span class="ansi-green-fg ansi-bold">    729</span>         path_or_buf<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg ansi-bold">    730</span>         encoding<span class="ansi-blue-fg">=</span>encoding<span class="ansi-blue-fg">,</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/common.py</span> in <span class="ansi-cyan-fg">_get_filepath_or_buffer</span><span class="ansi-blue-fg">(filepath_or_buffer, encoding, compression, mode, storage_options)</span>
+<span class="ansi-green-fg ansi-bold">    382</span>         <span class="ansi-red-fg"># assuming storage_options is to be interpreted as headers</span>
+<span class="ansi-green-fg ansi-bold">    383</span>         req_info <span class="ansi-blue-fg">=</span> urllib<span class="ansi-blue-fg">.</span>request<span class="ansi-blue-fg">.</span>Request<span class="ansi-blue-fg">(</span>filepath_or_buffer<span class="ansi-blue-fg">,</span> headers<span class="ansi-blue-fg">=</span>storage_options<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 384</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">with</span> urlopen<span class="ansi-blue-fg">(</span>req_info<span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">as</span> req<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    385</span>             content_encoding <span class="ansi-blue-fg">=</span> req<span class="ansi-blue-fg">.</span>headers<span class="ansi-blue-fg">.</span>get<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">"Content-Encoding"</span><span class="ansi-blue-fg">,</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    386</span>             <span class="ansi-green-fg">if</span> content_encoding <span class="ansi-blue-fg">==</span> <span class="ansi-blue-fg">"gzip"</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/common.py</span> in <span class="ansi-cyan-fg">urlopen</span><span class="ansi-blue-fg">(*args, **kwargs)</span>
+<span class="ansi-green-fg ansi-bold">    287</span>     <span class="ansi-green-fg">import</span> urllib<span class="ansi-blue-fg">.</span>request
+<span class="ansi-green-fg ansi-bold">    288</span> 
+<span class="ansi-green-fg">--&gt; 289</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> urllib<span class="ansi-blue-fg">.</span>request<span class="ansi-blue-fg">.</span>urlopen<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    290</span> 
+<span class="ansi-green-fg ansi-bold">    291</span> 
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">urlopen</span><span class="ansi-blue-fg">(url, data, timeout, cafile, capath, cadefault, context)</span>
+<span class="ansi-green-fg ansi-bold">    213</span>     <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    214</span>         opener <span class="ansi-blue-fg">=</span> _opener
+<span class="ansi-green-fg">--&gt; 215</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> opener<span class="ansi-blue-fg">.</span>open<span class="ansi-blue-fg">(</span>url<span class="ansi-blue-fg">,</span> data<span class="ansi-blue-fg">,</span> timeout<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    216</span> 
+<span class="ansi-green-fg ansi-bold">    217</span> <span class="ansi-green-fg">def</span> install_opener<span class="ansi-blue-fg">(</span>opener<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">open</span><span class="ansi-blue-fg">(self, fullurl, data, timeout)</span>
+<span class="ansi-green-fg ansi-bold">    519</span>         <span class="ansi-green-fg">for</span> processor <span class="ansi-green-fg">in</span> self<span class="ansi-blue-fg">.</span>process_response<span class="ansi-blue-fg">.</span>get<span class="ansi-blue-fg">(</span>protocol<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    520</span>             meth <span class="ansi-blue-fg">=</span> getattr<span class="ansi-blue-fg">(</span>processor<span class="ansi-blue-fg">,</span> meth_name<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 521</span><span class="ansi-red-fg">             </span>response <span class="ansi-blue-fg">=</span> meth<span class="ansi-blue-fg">(</span>req<span class="ansi-blue-fg">,</span> response<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    522</span> 
+<span class="ansi-green-fg ansi-bold">    523</span>         <span class="ansi-green-fg">return</span> response
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">http_response</span><span class="ansi-blue-fg">(self, request, response)</span>
+<span class="ansi-green-fg ansi-bold">    628</span>         <span class="ansi-red-fg"># request was successfully received, understood, and accepted.</span>
+<span class="ansi-green-fg ansi-bold">    629</span>         <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> <span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">200</span> <span class="ansi-blue-fg">&lt;=</span> code <span class="ansi-blue-fg">&lt;</span> <span class="ansi-cyan-fg">300</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 630</span><span class="ansi-red-fg">             response = self.parent.error(
+</span><span class="ansi-green-fg ansi-bold">    631</span>                 'http', request, response, code, msg, hdrs)
+<span class="ansi-green-fg ansi-bold">    632</span> 
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">error</span><span class="ansi-blue-fg">(self, proto, *args)</span>
+<span class="ansi-green-fg ansi-bold">    557</span>         <span class="ansi-green-fg">if</span> http_err<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    558</span>             args <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">(</span>dict<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">'default'</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">'http_error_default'</span><span class="ansi-blue-fg">)</span> <span class="ansi-blue-fg">+</span> orig_args
+<span class="ansi-green-fg">--&gt; 559</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">return</span> self<span class="ansi-blue-fg">.</span>_call_chain<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    560</span> 
+<span class="ansi-green-fg ansi-bold">    561</span> <span class="ansi-red-fg"># XXX probably also want an abstract factory that knows when it makes</span>
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">_call_chain</span><span class="ansi-blue-fg">(self, chain, kind, meth_name, *args)</span>
+<span class="ansi-green-fg ansi-bold">    490</span>         <span class="ansi-green-fg">for</span> handler <span class="ansi-green-fg">in</span> handlers<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    491</span>             func <span class="ansi-blue-fg">=</span> getattr<span class="ansi-blue-fg">(</span>handler<span class="ansi-blue-fg">,</span> meth_name<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 492</span><span class="ansi-red-fg">             </span>result <span class="ansi-blue-fg">=</span> func<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    493</span>             <span class="ansi-green-fg">if</span> result <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    494</span>                 <span class="ansi-green-fg">return</span> result
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">http_error_default</span><span class="ansi-blue-fg">(self, req, fp, code, msg, hdrs)</span>
+<span class="ansi-green-fg ansi-bold">    637</span> <span class="ansi-green-fg">class</span> HTTPDefaultErrorHandler<span class="ansi-blue-fg">(</span>BaseHandler<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    638</span>     <span class="ansi-green-fg">def</span> http_error_default<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> req<span class="ansi-blue-fg">,</span> fp<span class="ansi-blue-fg">,</span> code<span class="ansi-blue-fg">,</span> msg<span class="ansi-blue-fg">,</span> hdrs<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 639</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">raise</span> HTTPError<span class="ansi-blue-fg">(</span>req<span class="ansi-blue-fg">.</span>full_url<span class="ansi-blue-fg">,</span> code<span class="ansi-blue-fg">,</span> msg<span class="ansi-blue-fg">,</span> hdrs<span class="ansi-blue-fg">,</span> fp<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    640</span> 
+<span class="ansi-green-fg ansi-bold">    641</span> <span class="ansi-green-fg">class</span> HTTPRedirectHandler<span class="ansi-blue-fg">(</span>BaseHandler<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-red-fg">HTTPError</span>: HTTP Error 403: Forbidden</pre>
+</div>
+</div>
+</div>
+<p>This still returns 3 tables. As we remarked above, the table that we want is the first one (see <code>[0]</code> below).</p>
+<div id="cell-26" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:304}}" data-outputid="ad5dd7ed-ac48-4abf-d9d1-e17b88d37d9e">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">#df_cities2 = pd.read_html("https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population", attrs = {'class': 'wikitable sortable', "style": "text-align:center"})[0]</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">#df_cities2</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">#Professor Bodwin said to skip this section</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-error">
+<div class="ansi-escaped-output">
+<pre><span class="ansi-red-fg">---------------------------------------------------------------------------</span>
+<span class="ansi-red-fg">HTTPError</span>                                 Traceback (most recent call last)
+<span class="ansi-green-fg">/tmp/ipython-input-3497910738.py</span> in <span class="ansi-cyan-fg">&lt;cell line: 0&gt;</span><span class="ansi-blue-fg">()</span>
+<span class="ansi-green-fg">----&gt; 1</span><span class="ansi-red-fg"> </span>df_cities2 <span class="ansi-blue-fg">=</span> pd<span class="ansi-blue-fg">.</span>read_html<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">"https://en.wikipedia.org/wiki/List_of_United_States_cities_by_population"</span><span class="ansi-blue-fg">,</span> attrs <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">{</span><span class="ansi-blue-fg">'class'</span><span class="ansi-blue-fg">:</span> <span class="ansi-blue-fg">'wikitable sortable'</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">"style"</span><span class="ansi-blue-fg">:</span> <span class="ansi-blue-fg">"text-align:center"</span><span class="ansi-blue-fg">}</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">[</span><span class="ansi-cyan-fg">0</span><span class="ansi-blue-fg">]</span>
+<span class="ansi-green-fg ansi-bold">      2</span> df_cities2
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">read_html</span><span class="ansi-blue-fg">(io, match, flavor, header, index_col, skiprows, attrs, parse_dates, thousands, encoding, decimal, converters, na_values, keep_default_na, displayed_only, extract_links, dtype_backend, storage_options)</span>
+<span class="ansi-green-fg ansi-bold">   1238</span>         )
+<span class="ansi-green-fg ansi-bold">   1239</span> 
+<span class="ansi-green-fg">-&gt; 1240</span><span class="ansi-red-fg">     return _parse(
+</span><span class="ansi-green-fg ansi-bold">   1241</span>         flavor<span class="ansi-blue-fg">=</span>flavor<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg ansi-bold">   1242</span>         io<span class="ansi-blue-fg">=</span>io<span class="ansi-blue-fg">,</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">_parse</span><span class="ansi-blue-fg">(flavor, io, match, attrs, encoding, displayed_only, extract_links, storage_options, **kwargs)</span>
+<span class="ansi-green-fg ansi-bold">    981</span> 
+<span class="ansi-green-fg ansi-bold">    982</span>         <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 983</span><span class="ansi-red-fg">             </span>tables <span class="ansi-blue-fg">=</span> p<span class="ansi-blue-fg">.</span>parse_tables<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    984</span>         <span class="ansi-green-fg">except</span> ValueError <span class="ansi-green-fg">as</span> caught<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    985</span>             <span class="ansi-red-fg"># if `io` is an io-like object, check if it's seekable</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">parse_tables</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-fg ansi-bold">    247</span>         list of parsed <span class="ansi-blue-fg">(</span>header<span class="ansi-blue-fg">,</span> body<span class="ansi-blue-fg">,</span> footer<span class="ansi-blue-fg">)</span> tuples <span class="ansi-green-fg">from</span> tables<span class="ansi-blue-fg">.</span>
+<span class="ansi-green-fg ansi-bold">    248</span>         """
+<span class="ansi-green-fg">--&gt; 249</span><span class="ansi-red-fg">         </span>tables <span class="ansi-blue-fg">=</span> self<span class="ansi-blue-fg">.</span>_parse_tables<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>_build_doc<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">.</span>match<span class="ansi-blue-fg">,</span> self<span class="ansi-blue-fg">.</span>attrs<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    250</span>         <span class="ansi-green-fg">return</span> <span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>_parse_thead_tbody_tfoot<span class="ansi-blue-fg">(</span>table<span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">for</span> table <span class="ansi-green-fg">in</span> tables<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    251</span> 
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">_build_doc</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-fg ansi-bold">    804</span>                     <span class="ansi-green-fg">pass</span>
+<span class="ansi-green-fg ansi-bold">    805</span>             <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 806</span><span class="ansi-red-fg">                 </span><span class="ansi-green-fg">raise</span> e
+<span class="ansi-green-fg ansi-bold">    807</span>         <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    808</span>             <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> hasattr<span class="ansi-blue-fg">(</span>r<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">"text_content"</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/html.py</span> in <span class="ansi-cyan-fg">_build_doc</span><span class="ansi-blue-fg">(self)</span>
+<span class="ansi-green-fg ansi-bold">    783</span>         <span class="ansi-green-fg">try</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    784</span>             <span class="ansi-green-fg">if</span> is_url<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">.</span>io<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 785</span><span class="ansi-red-fg">                 with get_handle(
+</span><span class="ansi-green-fg ansi-bold">    786</span>                     self<span class="ansi-blue-fg">.</span>io<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">"r"</span><span class="ansi-blue-fg">,</span> storage_options<span class="ansi-blue-fg">=</span>self<span class="ansi-blue-fg">.</span>storage_options
+<span class="ansi-green-fg ansi-bold">    787</span>                 ) as f:
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/common.py</span> in <span class="ansi-cyan-fg">get_handle</span><span class="ansi-blue-fg">(path_or_buf, mode, encoding, compression, memory_map, is_text, errors, storage_options)</span>
+<span class="ansi-green-fg ansi-bold">    726</span> 
+<span class="ansi-green-fg ansi-bold">    727</span>     <span class="ansi-red-fg"># open URLs</span>
+<span class="ansi-green-fg">--&gt; 728</span><span class="ansi-red-fg">     ioargs = _get_filepath_or_buffer(
+</span><span class="ansi-green-fg ansi-bold">    729</span>         path_or_buf<span class="ansi-blue-fg">,</span>
+<span class="ansi-green-fg ansi-bold">    730</span>         encoding<span class="ansi-blue-fg">=</span>encoding<span class="ansi-blue-fg">,</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/common.py</span> in <span class="ansi-cyan-fg">_get_filepath_or_buffer</span><span class="ansi-blue-fg">(filepath_or_buffer, encoding, compression, mode, storage_options)</span>
+<span class="ansi-green-fg ansi-bold">    382</span>         <span class="ansi-red-fg"># assuming storage_options is to be interpreted as headers</span>
+<span class="ansi-green-fg ansi-bold">    383</span>         req_info <span class="ansi-blue-fg">=</span> urllib<span class="ansi-blue-fg">.</span>request<span class="ansi-blue-fg">.</span>Request<span class="ansi-blue-fg">(</span>filepath_or_buffer<span class="ansi-blue-fg">,</span> headers<span class="ansi-blue-fg">=</span>storage_options<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 384</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">with</span> urlopen<span class="ansi-blue-fg">(</span>req_info<span class="ansi-blue-fg">)</span> <span class="ansi-green-fg">as</span> req<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    385</span>             content_encoding <span class="ansi-blue-fg">=</span> req<span class="ansi-blue-fg">.</span>headers<span class="ansi-blue-fg">.</span>get<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">"Content-Encoding"</span><span class="ansi-blue-fg">,</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    386</span>             <span class="ansi-green-fg">if</span> content_encoding <span class="ansi-blue-fg">==</span> <span class="ansi-blue-fg">"gzip"</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/usr/local/lib/python3.12/dist-packages/pandas/io/common.py</span> in <span class="ansi-cyan-fg">urlopen</span><span class="ansi-blue-fg">(*args, **kwargs)</span>
+<span class="ansi-green-fg ansi-bold">    287</span>     <span class="ansi-green-fg">import</span> urllib<span class="ansi-blue-fg">.</span>request
+<span class="ansi-green-fg ansi-bold">    288</span> 
+<span class="ansi-green-fg">--&gt; 289</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> urllib<span class="ansi-blue-fg">.</span>request<span class="ansi-blue-fg">.</span>urlopen<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">**</span>kwargs<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    290</span> 
+<span class="ansi-green-fg ansi-bold">    291</span> 
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">urlopen</span><span class="ansi-blue-fg">(url, data, timeout, cafile, capath, cadefault, context)</span>
+<span class="ansi-green-fg ansi-bold">    213</span>     <span class="ansi-green-fg">else</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    214</span>         opener <span class="ansi-blue-fg">=</span> _opener
+<span class="ansi-green-fg">--&gt; 215</span><span class="ansi-red-fg">     </span><span class="ansi-green-fg">return</span> opener<span class="ansi-blue-fg">.</span>open<span class="ansi-blue-fg">(</span>url<span class="ansi-blue-fg">,</span> data<span class="ansi-blue-fg">,</span> timeout<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    216</span> 
+<span class="ansi-green-fg ansi-bold">    217</span> <span class="ansi-green-fg">def</span> install_opener<span class="ansi-blue-fg">(</span>opener<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">open</span><span class="ansi-blue-fg">(self, fullurl, data, timeout)</span>
+<span class="ansi-green-fg ansi-bold">    519</span>         <span class="ansi-green-fg">for</span> processor <span class="ansi-green-fg">in</span> self<span class="ansi-blue-fg">.</span>process_response<span class="ansi-blue-fg">.</span>get<span class="ansi-blue-fg">(</span>protocol<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">[</span><span class="ansi-blue-fg">]</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    520</span>             meth <span class="ansi-blue-fg">=</span> getattr<span class="ansi-blue-fg">(</span>processor<span class="ansi-blue-fg">,</span> meth_name<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 521</span><span class="ansi-red-fg">             </span>response <span class="ansi-blue-fg">=</span> meth<span class="ansi-blue-fg">(</span>req<span class="ansi-blue-fg">,</span> response<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    522</span> 
+<span class="ansi-green-fg ansi-bold">    523</span>         <span class="ansi-green-fg">return</span> response
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">http_response</span><span class="ansi-blue-fg">(self, request, response)</span>
+<span class="ansi-green-fg ansi-bold">    628</span>         <span class="ansi-red-fg"># request was successfully received, understood, and accepted.</span>
+<span class="ansi-green-fg ansi-bold">    629</span>         <span class="ansi-green-fg">if</span> <span class="ansi-green-fg">not</span> <span class="ansi-blue-fg">(</span><span class="ansi-cyan-fg">200</span> <span class="ansi-blue-fg">&lt;=</span> code <span class="ansi-blue-fg">&lt;</span> <span class="ansi-cyan-fg">300</span><span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 630</span><span class="ansi-red-fg">             response = self.parent.error(
+</span><span class="ansi-green-fg ansi-bold">    631</span>                 'http', request, response, code, msg, hdrs)
+<span class="ansi-green-fg ansi-bold">    632</span> 
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">error</span><span class="ansi-blue-fg">(self, proto, *args)</span>
+<span class="ansi-green-fg ansi-bold">    557</span>         <span class="ansi-green-fg">if</span> http_err<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    558</span>             args <span class="ansi-blue-fg">=</span> <span class="ansi-blue-fg">(</span>dict<span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">'default'</span><span class="ansi-blue-fg">,</span> <span class="ansi-blue-fg">'http_error_default'</span><span class="ansi-blue-fg">)</span> <span class="ansi-blue-fg">+</span> orig_args
+<span class="ansi-green-fg">--&gt; 559</span><span class="ansi-red-fg">             </span><span class="ansi-green-fg">return</span> self<span class="ansi-blue-fg">.</span>_call_chain<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    560</span> 
+<span class="ansi-green-fg ansi-bold">    561</span> <span class="ansi-red-fg"># XXX probably also want an abstract factory that knows when it makes</span>
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">_call_chain</span><span class="ansi-blue-fg">(self, chain, kind, meth_name, *args)</span>
+<span class="ansi-green-fg ansi-bold">    490</span>         <span class="ansi-green-fg">for</span> handler <span class="ansi-green-fg">in</span> handlers<span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    491</span>             func <span class="ansi-blue-fg">=</span> getattr<span class="ansi-blue-fg">(</span>handler<span class="ansi-blue-fg">,</span> meth_name<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg">--&gt; 492</span><span class="ansi-red-fg">             </span>result <span class="ansi-blue-fg">=</span> func<span class="ansi-blue-fg">(</span><span class="ansi-blue-fg">*</span>args<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    493</span>             <span class="ansi-green-fg">if</span> result <span class="ansi-green-fg">is</span> <span class="ansi-green-fg">not</span> <span class="ansi-green-fg">None</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    494</span>                 <span class="ansi-green-fg">return</span> result
+
+<span class="ansi-green-fg">/usr/lib/python3.12/urllib/request.py</span> in <span class="ansi-cyan-fg">http_error_default</span><span class="ansi-blue-fg">(self, req, fp, code, msg, hdrs)</span>
+<span class="ansi-green-fg ansi-bold">    637</span> <span class="ansi-green-fg">class</span> HTTPDefaultErrorHandler<span class="ansi-blue-fg">(</span>BaseHandler<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg ansi-bold">    638</span>     <span class="ansi-green-fg">def</span> http_error_default<span class="ansi-blue-fg">(</span>self<span class="ansi-blue-fg">,</span> req<span class="ansi-blue-fg">,</span> fp<span class="ansi-blue-fg">,</span> code<span class="ansi-blue-fg">,</span> msg<span class="ansi-blue-fg">,</span> hdrs<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+<span class="ansi-green-fg">--&gt; 639</span><span class="ansi-red-fg">         </span><span class="ansi-green-fg">raise</span> HTTPError<span class="ansi-blue-fg">(</span>req<span class="ansi-blue-fg">.</span>full_url<span class="ansi-blue-fg">,</span> code<span class="ansi-blue-fg">,</span> msg<span class="ansi-blue-fg">,</span> hdrs<span class="ansi-blue-fg">,</span> fp<span class="ansi-blue-fg">)</span>
+<span class="ansi-green-fg ansi-bold">    640</span> 
+<span class="ansi-green-fg ansi-bold">    641</span> <span class="ansi-green-fg">class</span> HTTPRedirectHandler<span class="ansi-blue-fg">(</span>BaseHandler<span class="ansi-blue-fg">)</span><span class="ansi-blue-fg">:</span>
+
+<span class="ansi-red-fg">HTTPError</span>: HTTP Error 403: Forbidden</pre>
+</div>
+</div>
+</div>
+<p>Wait, that seemed much easier than using Beautiful Soup, and it returned a data frame, and we even got for free some formatting like removing the commas from the population! Why didn’t we just use <code>read_html</code> in the first place? It’s true the <code>read_html</code> works well when scraping information from an HTML <em>table</em>. Unfortunately, you often want to scrape information from a webpage that isn’t conveniently stored in an HTML table, in which case <code>read_html</code> won’t work. (It only searches for <code>&lt;table&gt;</code>, <code>&lt;th&gt;</code>, <code>&lt;tr&gt;</code>, and <code>&lt;td&gt;</code> tags, but there are many other HTML tags.) Though Beautiful Soup is not as simple as <code>read_html</code>, it is more flexible and thus more widely applicable.</p>
+</section>
+<section id="scraping-information-that-is-not-in-a-table-with-beautiful-soup" class="level2">
+<h2 class="anchored" data-anchor-id="scraping-information-that-is-not-in-a-table-with-beautiful-soup">Scraping information that is NOT in a <code>&lt;table&gt;</code> with Beautiful Soup</h2>
+<p>The Cal Poly course catalog http://catalog.calpoly.edu/collegesandprograms/collegeofsciencemathematics/statistics/#courseinventory contains a list of courses offered by the Statistics department. <strong>You will scrape this website to obtain a Pandas data frame with one row for each DATA or STAT course and two columns: course name and number (e.g, DATA 301. Introduction to Data Science) and term typically offered (e.g., Term Typically Offered: F, W, SP).</strong></p>
+<p>Note: Pandas <code>read_html</code> is not help here since the courses are not stored in a <code>&lt;table&gt;.</code></p>
+<div id="cell-31" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;}}" data-outputid="d3ccd9e2-4d1c-4602-c95a-b181d57be5a6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a>pd.read_html(<span class="st">"http://catalog.calpoly.edu/collegesandprograms/collegeofsciencemathematics/statistics/#courseinventory"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="20">
+<pre><code>[                                        Program name   Program type
+ 0                              Actuarial Preparation          Minor
+ 1  Cross Disciplinary Studies Minor in Bioinforma...          Minor
+ 2   Cross Disciplinary Studies Minor in Data Science          Minor
+ 3                                         Statistics  BS, MS, Minor]</code></pre>
+</div>
+</div>
+<p>Notes/suggestions:</p>
+<ul>
+<li>Inspect the page source as you write your code</li>
+<li>The courses are not stored in a <code>&lt;table&gt;</code>. How are they stored?</li>
+<li>You will need to write a loop to get the information for all courses, but you might want to try just scraping the info for DATA 100 first</li>
+<li>What kind of tag is the course name stored in? What is the <code>class</code> of the tag?</li>
+<li>What kind of tag is the quarter(s) the course is offered stored in? What is the <code>class</code> of the tag? Is this the only tag of this type with the class? How will you get the one you want?</li>
+<li>You don’t have to remove the number of units (e.g., 4 units) from the course name and number, but you can try it if you want</li>
+<li>You will need to pull the text from the tag. If <code>.text</code> returns text with “” at the end, try <code>get_text(strip = True)</code> instead of <code>text</code></li>
+<li>Don’t forget to convert to a Pandas Data Frame; it should have 74 rows and 2 columns</li>
+<li>The goal of this exercise is just to create the Data Frame. If you were going to use it then you might need to clean the data first. (You can use Beautiful Soup to do some of the cleaning for you, but that goes beyond our scope.)</li>
+</ul>
+<div id="cell-33" class="cell">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># YOUR CODE HERE. ADD AS MANY CELLS AS NEEDED</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</div>
+<div id="cell-34" class="cell" data-quarto-private-1="{&quot;key&quot;:&quot;colab&quot;,&quot;value&quot;:{&quot;base_uri&quot;:&quot;https://localhost:8080/&quot;,&quot;height&quot;:423}}" data-outputid="42aa3978-2366-4703-8b81-e20b86415e27" data-execution_count="49">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>URL <span class="op">=</span> <span class="st">"http://catalog.calpoly.edu/collegesandprograms/collegeofsciencemathematics/statistics/#courseinventory"</span></span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>HEADERS <span class="op">=</span> {<span class="st">"User-Agent"</span>: <span class="st">"Mozilla/5.0 (Windows NT 10.0; Win64; x64)"</span>}</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>response <span class="op">=</span> requests.get(URL, headers<span class="op">=</span>HEADERS)</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>soup <span class="op">=</span> BeautifulSoup(response.text, <span class="st">"html.parser"</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>rows <span class="op">=</span> []</span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> block <span class="kw">in</span> soup.find_all(<span class="st">"div"</span>,class_ <span class="op">=</span> <span class="st">"courseblock"</span>):</span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a>  title_tag <span class="op">=</span> block.find(<span class="st">"p"</span>, class_<span class="op">=</span><span class="st">"courseblocktitle"</span>)</span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="kw">not</span> title_tag:</span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a>      <span class="cf">continue</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a>  span_tag <span class="op">=</span> title_tag.find(<span class="st">"span"</span>, class_<span class="op">=</span><span class="st">"courseblockhours"</span>) <span class="co">#this is how you remove the units</span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a>  span_tag.extract()<span class="co">#call the thing made to remove the units</span></span>
+<span id="cb17-18"><a href="#cb17-18" aria-hidden="true" tabindex="-1"></a>  title <span class="op">=</span> title_tag.get_text(strip<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb17-19"><a href="#cb17-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-20"><a href="#cb17-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-21"><a href="#cb17-21" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> term <span class="kw">in</span> block.find_all(<span class="st">"p"</span>,class_<span class="op">=</span><span class="st">"noindent"</span>):</span>
+<span id="cb17-22"><a href="#cb17-22" aria-hidden="true" tabindex="-1"></a>    q <span class="op">=</span> term.get_text(<span class="st">" "</span>, strip<span class="op">=</span><span class="va">True</span>)</span>
+<span id="cb17-23"><a href="#cb17-23" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> <span class="st">"Term Typically Offered:"</span> <span class="kw">in</span> q:</span>
+<span id="cb17-24"><a href="#cb17-24" aria-hidden="true" tabindex="-1"></a>      qname <span class="op">=</span> q</span>
+<span id="cb17-25"><a href="#cb17-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-26"><a href="#cb17-26" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> <span class="st">"DATA"</span> <span class="kw">in</span> title <span class="kw">or</span> <span class="st">"STAT"</span> <span class="kw">in</span> title:</span>
+<span id="cb17-27"><a href="#cb17-27" aria-hidden="true" tabindex="-1"></a>    rows.append({<span class="st">"course"</span>: title, <span class="st">"term"</span>: qname})</span>
+<span id="cb17-28"><a href="#cb17-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-29"><a href="#cb17-29" aria-hidden="true" tabindex="-1"></a>pd.DataFrame(rows)</span>
+<span id="cb17-30"><a href="#cb17-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-31"><a href="#cb17-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-32"><a href="#cb17-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-33"><a href="#cb17-33" aria-hidden="true" tabindex="-1"></a></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display" data-execution_count="49">
+<div id="df-2720dddf-a1f9-4391-a229-b7412b680c8a" class="colab-df-container">
+    <div>
+
+
+<table class="dataframe caption-top table table-sm table-striped small" data-border="1">
+<thead>
+<tr class="header">
+<th data-quarto-table-cell-role="th"></th>
+<th data-quarto-table-cell-role="th">course</th>
+<th data-quarto-table-cell-role="th">term</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">0</th>
+<td>DATA&nbsp;100. Data Science for All I.</td>
+<td>Term Typically Offered: F, W, SP</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">1</th>
+<td>DATA&nbsp;301. Introduction to Data Science.</td>
+<td>Term Typically Offered: F, W, SP</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">2</th>
+<td>DATA&nbsp;401. Data Science Process and Ethics.</td>
+<td>Term Typically Offered: F</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">3</th>
+<td>DATA&nbsp;402. Mathematical Foundations of Data Sci...</td>
+<td>Term Typically Offered: F</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">4</th>
+<td>DATA&nbsp;403. Data Science Projects Laboratory.</td>
+<td>Term Typically Offered: F</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">...</th>
+<td>...</td>
+<td>...</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">69</th>
+<td>STAT&nbsp;551. Statistical Learning with R.</td>
+<td>Term Typically Offered: F</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">70</th>
+<td>STAT&nbsp;566. Graduate Consulting Practicum.</td>
+<td>Term Typically Offered: SP</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">71</th>
+<td>STAT&nbsp;570. Selected Advanced Topics.</td>
+<td>Term Typically Offered: TBD</td>
+</tr>
+<tr class="even">
+<th data-quarto-table-cell-role="th">72</th>
+<td>STAT&nbsp;590. Graduate Seminar in Statistics.</td>
+<td>Term Typically Offered: F, W, SP</td>
+</tr>
+<tr class="odd">
+<th data-quarto-table-cell-role="th">73</th>
+<td>STAT&nbsp;599. Thesis.</td>
+<td>Term Typically Offered: TBD</td>
+</tr>
+</tbody>
+</table>
+
+<p>74 rows × 2 columns</p>
+</div>
+    <div class="colab-df-buttons">
+
+  <div class="colab-df-container">
+    <button class="colab-df-convert" onclick="convertToInteractive('df-2720dddf-a1f9-4391-a229-b7412b680c8a')" title="Convert this dataframe to an interactive table." style="display:none;">
+
+  <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewbox="0 -960 960 960">
+    <path d="M120-120v-720h720v720H120Zm60-500h600v-160H180v160Zm220 220h160v-160H400v160Zm0 220h160v-160H400v160ZM180-400h160v-160H180v160Zm440 0h160v-160H620v160ZM180-180h160v-160H180v160Zm440 0h160v-160H620v160Z"></path>
+  </svg>
+    </button>
+
+  <style>
+    .colab-df-container {
+      display:flex;
+      gap: 12px;
+    }
+
+    .colab-df-convert {
+      background-color: #E8F0FE;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: none;
+      fill: #1967D2;
+      height: 32px;
+      padding: 0 0 0 0;
+      width: 32px;
+    }
+
+    .colab-df-convert:hover {
+      background-color: #E2EBFA;
+      box-shadow: 0px 1px 2px rgba(60, 64, 67, 0.3), 0px 1px 3px 1px rgba(60, 64, 67, 0.15);
+      fill: #174EA6;
+    }
+
+    .colab-df-buttons div {
+      margin-bottom: 4px;
+    }
+
+    [theme=dark] .colab-df-convert {
+      background-color: #3B4455;
+      fill: #D2E3FC;
+    }
+
+    [theme=dark] .colab-df-convert:hover {
+      background-color: #434B5C;
+      box-shadow: 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+      filter: drop-shadow(0px 1px 2px rgba(0, 0, 0, 0.3));
+      fill: #FFFFFF;
+    }
+  </style>
+
+    <script>
+      const buttonEl =
+        document.querySelector('#df-2720dddf-a1f9-4391-a229-b7412b680c8a button.colab-df-convert');
+      buttonEl.style.display =
+        google.colab.kernel.accessAllowed ? 'block' : 'none';
+
+      async function convertToInteractive(key) {
+        const element = document.querySelector('#df-2720dddf-a1f9-4391-a229-b7412b680c8a');
+        const dataTable =
+          await google.colab.kernel.invokeFunction('convertToInteractive',
+                                                    [key], {});
+        if (!dataTable) return;
+
+        const docLinkHtml = 'Like what you see? Visit the ' +
+          '<a target="_blank" href=https://colab.research.google.com/notebooks/data_table.ipynb>data table notebook</a>'
+          + ' to learn more about interactive tables.';
+        element.innerHTML = '';
+        dataTable['output_type'] = 'display_data';
+        await google.colab.output.renderOutput(dataTable, element);
+        const docLink = document.createElement('div');
+        docLink.innerHTML = docLinkHtml;
+        element.appendChild(docLink);
+      }
+    </script>
+  </div>
+
+
+    <div id="df-03506abb-6089-4acd-a41a-1340e3b6a372">
+      <button class="colab-df-quickchart" onclick="quickchart('df-03506abb-6089-4acd-a41a-1340e3b6a372')" title="Suggest charts" style="display:none;">
+
+<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewbox="0 0 24 24" width="24px">
+    <g>
+        <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"></path>
+    </g>
+</svg>
+      </button>
+
+<style>
+  .colab-df-quickchart {
+      --bg-color: #E8F0FE;
+      --fill-color: #1967D2;
+      --hover-bg-color: #E2EBFA;
+      --hover-fill-color: #174EA6;
+      --disabled-fill-color: #AAA;
+      --disabled-bg-color: #DDD;
+  }
+
+  [theme=dark] .colab-df-quickchart {
+      --bg-color: #3B4455;
+      --fill-color: #D2E3FC;
+      --hover-bg-color: #434B5C;
+      --hover-fill-color: #FFFFFF;
+      --disabled-bg-color: #3B4455;
+      --disabled-fill-color: #666;
+  }
+
+  .colab-df-quickchart {
+    background-color: var(--bg-color);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: none;
+    fill: var(--fill-color);
+    height: 32px;
+    padding: 0;
+    width: 32px;
+  }
+
+  .colab-df-quickchart:hover {
+    background-color: var(--hover-bg-color);
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.3), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+    fill: var(--button-hover-fill-color);
+  }
+
+  .colab-df-quickchart-complete:disabled,
+  .colab-df-quickchart-complete:disabled:hover {
+    background-color: var(--disabled-bg-color);
+    fill: var(--disabled-fill-color);
+    box-shadow: none;
+  }
+
+  .colab-df-spinner {
+    border: 2px solid var(--fill-color);
+    border-color: transparent;
+    border-bottom-color: var(--fill-color);
+    animation:
+      spin 1s steps(1) infinite;
+  }
+
+  @keyframes spin {
+    0% {
+      border-color: transparent;
+      border-bottom-color: var(--fill-color);
+      border-left-color: var(--fill-color);
+    }
+    20% {
+      border-color: transparent;
+      border-left-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+    }
+    30% {
+      border-color: transparent;
+      border-left-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+      border-right-color: var(--fill-color);
+    }
+    40% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+      border-top-color: var(--fill-color);
+    }
+    60% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+    }
+    80% {
+      border-color: transparent;
+      border-right-color: var(--fill-color);
+      border-bottom-color: var(--fill-color);
+    }
+    90% {
+      border-color: transparent;
+      border-bottom-color: var(--fill-color);
+    }
+  }
+</style>
+
+      <script>
+        async function quickchart(key) {
+          const quickchartButtonEl =
+            document.querySelector('#' + key + ' button');
+          quickchartButtonEl.disabled = true;  // To prevent multiple clicks.
+          quickchartButtonEl.classList.add('colab-df-spinner');
+          try {
+            const charts = await google.colab.kernel.invokeFunction(
+                'suggestCharts', [key], {});
+          } catch (error) {
+            console.error('Error during call to suggestCharts:', error);
+          }
+          quickchartButtonEl.classList.remove('colab-df-spinner');
+          quickchartButtonEl.classList.add('colab-df-quickchart-complete');
+        }
+        (() => {
+          let quickchartButtonEl =
+            document.querySelector('#df-03506abb-6089-4acd-a41a-1340e3b6a372 button');
+          quickchartButtonEl.style.display =
+            google.colab.kernel.accessAllowed ? 'block' : 'none';
+        })();
+      </script>
+    </div>
+
+    </div>
+  </div>
+</div>
+</div>
+<p>Hints:</p>
+<ul>
+<li>Each course is represented by a <code>&lt;div&gt;</code> with <code>class=courseblock</code>, so you can find all the courses with <code>soup.find_all("div", {"class": "courseblock"})</code></li>
+<li>The course name is in a <code>&lt;p&gt;</code> tag with <code>class=courseblocktitle</code>, inside a <code>&lt;strong&gt;</code> tag. (Though I don’t think we need to find the strong tag here.)</li>
+<li>The term typically offered is in <code>&lt;p&gt;</code> tag with <code>class=noindent</code>. However, there are several tags with this class; term typically offered is the first one.</li>
+<li>If you want to use Beautiful Soup to remove the course units (e.g., 4 units), find the <code>&lt;span&gt;</code> tag within the course name tag and <code>.extract()</code> this span tag</li>
+</ul>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
