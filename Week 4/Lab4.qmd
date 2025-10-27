@@ -1,0 +1,325 @@
+---
+title: "Lab 4"
+format:
+  html:
+    theme : cosmo
+    code-fold: true
+    embed-resources: true
+jupyter: gsb544
+execute:
+    echo: true
+---
+
+[Link to my Github Repository](https://github.com/bigturtle13/GSB544/tree/main/Week%204)
+
+Import Packages
+
+```{python}
+
+import requests  
+from bs4 import BeautifulSoup 
+import pandas as pd
+import re
+from plotnine import *
+
+```
+
+1. Data from unstructured websites, Get meal plan
+
+```{python}
+
+#meal plan page(can just change the number at end of link to see different meal plans), i used 194 as my testing meal plan
+URL = "https://tastesbetterfromscratch.com/meal-plan-194/"
+
+#get HTML from site
+resp = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
+soup = BeautifulSoup(resp.text, "html.parser")
+
+rows = []
+
+#find all <p> tags with class="has-text-align-left"
+for p in soup.find_all("p", class_="has-text-align-left"):
+    day_tag = p.find("strong") #<strong> for day name
+    link_tag = p.find("a", href=True) #<a> tag for recipe name + link
+
+    day = day_tag.get_text(strip=True).rstrip(":") #cleaned day name
+    name = link_tag.get_text(strip=True) #recipe name
+    link = link_tag["href"] #recipe link
+
+    price = p.get_text(" ", strip=True) #gets all text in the <p> tag string
+    dollarsign = re.search(r'\$\d+', price) #searches for dollar sign followed by numbers
+    newprice = dollarsign.group(0) if dollarsign else "" #extract text if a dollarsign is found otherwise move on
+
+    rows.append({
+        "Day of the Week": day,
+        "Name of Recipe": name,
+        "Link to Recipe": link,
+        "Price of Recipe": newprice
+    })
+
+df = pd.DataFrame(rows, columns=["Day of the Week", "Name of Recipe", "Link to Recipe", "Price of Recipe"])
+df
+
+```
+
+2. Data from an API, Find matching recipes to Monday day in meal plan
+
+```{python}
+
+monday_recipe = df.loc[df["Day of the Week"] == "Monday", "Name of Recipe"].iloc[0] #get monday recipe
+
+url = "https://tasty.p.rapidapi.com/recipes/list"
+headers = {
+    "X-RapidAPI-Key": "15bb89a7d5msh77e6b47794d9502p11b4c9jsn11ec5a5d43b4",
+    "X-RapidAPI-Host": "tasty.p.rapidapi.com"
+}
+
+params = {"from": "0", "size": "100", "q": monday_recipe}
+response = requests.get(url, headers=headers, params=params)
+
+#normalize JSON and keep only recipe names
+data = response.json()
+results = data.get("results", [])
+df_results = pd.json_normalize(results)
+df_results["name"]
+
+```
+
+3. Automate it, Function to get the meal plan information and matching recipes
+
+```{python}
+#this code was just me practicing to figure out how to get all the days
+#this code is not for grading it was just useful for me to build the larger function
+url = "https://tasty.p.rapidapi.com/recipes/list"
+headers = {
+    "X-RapidAPI-Key": "15bb89a7d5msh77e6b47794d9502p11b4c9jsn11ec5a5d43b4",
+    "X-RapidAPI-Host": "tasty.p.rapidapi.com"
+}
+
+alldays = df["Day of the Week"].unique()
+all_frames = []
+
+for day in alldays:
+    recipe_name = df.loc[df["Day of the Week"] == day, "Name of Recipe"].iloc[0]
+
+    original_df = pd.DataFrame([{"Day of the Week": day,"Name of Recipe": recipe_name}]) #makes df of original recipes for each day
+
+    params = {"from": "0", "size": "100", "q": recipe_name} 
+    response = requests.get(url, headers=headers, params=params)
+    data = response.json()
+    results = data.get("results", [])
+    df_results = pd.json_normalize(results)
+
+    if "name" in df_results.columns:
+        df_results = df_results[["name"]].rename(columns={"name": "Name of Recipe"}) #renames to match original df
+        df_results["Day of the Week"] = day #adds day column we need
+    else:
+        df_results = pd.DataFrame(columns=["Day of the Week", "Name of Recipe"]) #just makes empty df in case there no matches
+
+    combined_day = pd.concat([original_df, df_results], ignore_index=True) #combine original + matches for the day
+    all_frames.append(combined_day) #adds everything to the original empty list we made
+
+# combine all days
+df_all = pd.concat(all_frames, ignore_index=True) #adds together everything in list into a dataframe
+#df_all
+```
+```{python}
+
+#combine code from before
+def get_mealplan_data(plan_number):
+    #meal plan page (change the number at end of link to see different meal plans)
+    URL = f"https://tastesbetterfromscratch.com/meal-plan-{plan_number}/"
+
+    #get HTML from site
+    resp = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    rows = []
+
+    #find all <p> tags with class="has-text-align-left"
+    for p in soup.find_all("p", class_="has-text-align-left"):
+        day_tag = p.find("strong") #<strong> for day name
+        link_tag = p.find("a", href=True) #<a> tag for recipe name + link
+
+        day = day_tag.get_text(strip=True).rstrip(":") #cleaned day name
+        name = link_tag.get_text(strip=True) #recipe name
+        link = link_tag["href"] #recipe link
+
+        price = p.get_text(" ", strip=True) #gets all text in the <p> tag string
+        dollarsign = re.search(r'\$\d+', price) #searches for dollar sign followed by numbers
+        newprice = dollarsign.group(0) if dollarsign else "" #extract text if a dollarsign is found otherwise move on
+
+        rows.append({
+            "Day of the Week": day,
+            "Name of Recipe": name,
+            "Link to Recipe": link,
+            "Price of Recipe": newprice,
+            "Source": "Meal Plan Recipe"
+        })
+
+    df = pd.DataFrame(rows, columns=["Day of the Week", "Name of Recipe", "Link to Recipe", "Price of Recipe", "Source"])
+
+
+
+    #start of matching recipe section similar to monday code
+    url = "https://tasty.p.rapidapi.com/recipes/list"
+    headers = {
+        "X-RapidAPI-Key": "15bb89a7d5msh77e6b47794d9502p11b4c9jsn11ec5a5d43b4",
+        "X-RapidAPI-Host": "tasty.p.rapidapi.com"
+    }
+
+    alldays = df["Day of the Week"].unique()#all unique days
+    all_frames = []
+    keep_fields = ["name", "slug", "canonical_id", "cook_time_minutes", "prep_time_minutes", "is_shoppable",#all the columns i want to keep
+        "user_ratings.score", "user_ratings.count_positive", "user_ratings.count_negative",
+        "nutrition.calories", "nutrition.fat", "nutrition.protein", "nutrition.carbohydrates",
+        "nutrition.fiber", "nutrition.sugar", "tags"]
+
+    for day in alldays:
+        recipe_name = df.loc[df["Day of the Week"] == day, "Name of Recipe"].iloc[0]
+        recipe_price = df.loc[df["Day of the Week"] == day, "Price of Recipe"].iloc[0]
+        recipe_link  = df.loc[df["Day of the Week"] == day, "Link to Recipe"].iloc[0]
+
+        original_df = pd.DataFrame([{ #all the columns we want to keep
+            "Day of the Week": day,
+            "Name of Recipe": recipe_name,
+            "Source": "Meal Plan Recipe",
+            "Price of Recipe": recipe_price,
+            "Link to Recipe": recipe_link,
+            "cook_time_minutes": "",
+            "prep_time_minutes": "",
+            "is_shoppable": "",
+            "user_ratings.score": "",
+            "user_ratings.count_positive": "",
+            "user_ratings.count_negative": "",
+            "nutrition.calories": "",
+            "nutrition.fat": "",
+            "nutrition.protein": "",
+            "nutrition.carbohydrates": "",
+            "nutrition.fiber": "",
+            "nutrition.sugar": "",
+            "tags": ""
+        }])
+
+        #searching Tasty API
+        params = {"from": "0", "size": "100", "q": recipe_name}
+        response = requests.get(url, headers=headers, params=params)
+        data = response.json()
+        results = data.get("results", [])
+        df_results = pd.json_normalize(results)
+
+        #keep only relevant columns if they exist
+        available_fields = [f for f in keep_fields if f in df_results.columns] #keeps only the columns we want and checks through them
+        if available_fields:
+          df_results = df_results[available_fields]
+
+          #drop compilations/lists, keep only singular recipes, gets rid of things like 5 fingerless foods 
+          if "canonical_id" in df_results.columns:
+              df_results = df_results[df_results["canonical_id"].astype(str).str.startswith("recipe:")]
+              df_results = df_results.drop(columns=["canonical_id"])  #drop column we dont need showing
+
+          #renaming stuff, setting some values
+          df_results = df_results.rename(columns={"name": "Name of Recipe"})
+          df_results["Day of the Week"] = day
+          df_results["Price of Recipe"] = recipe_price
+          df_results["Source"] = "Tasty Recipe List"
+
+          if "slug" in df_results.columns:
+              df_results["Link to Recipe"] = "https://tasty.co/recipe/" + df_results["slug"] #adds link for each tasty recipe using slug column
+              df_results = df_results.drop(columns=["slug"]) #drop the old slug column to avoid the slug show since we now have link
+          else:
+              df_results["Link to Recipe"] = "" #blank if no slug
+        else:
+          df_results = pd.DataFrame(columns=original_df.columns)
+
+
+        combined_day = pd.concat([original_df, df_results], ignore_index=True) #concatenate the dfs
+        all_frames.append(combined_day) #append dfs to list
+
+    #combine all days into one dataframe
+    df_all = pd.concat(all_frames, ignore_index=True)
+    df_all = df_all.rename(columns={ #rename all the columns to be more readable in df
+        "slug": "Link to Recipe",
+        "cook_time_minutes": "Cook Time(minutes)",
+        "prep_time_minutes": "Prep Time(minutes)",
+        "is_shoppable": "Ingredients Included?",
+        "user_ratings.score": "User Ratings Score(0-1)",
+        "user_ratings.count_positive": "Number of Positive Ratings",
+        "user_ratings.count_negative": "Number of Negative Ratings",
+        "nutrition.calories": "Estimated Calories per Serving",
+        "nutrition.fat": "Fat(grams)",
+        "nutrition.protein": "Protein(grams)",
+        "nutrition.carbohydrates": "Carbohydrates(grams)",
+        "nutrition.fiber": "Fiber(grams)",
+        "nutrition.sugar": "Sugar(grams)",
+        "tags": "Tags(cuisine, diet, etc.)"
+    })
+    return df_all
+
+#example using mealplan 202:
+df_all = get_mealplan_data(202)
+df_all
+
+```
+
+4. Add a column with fuzzy matching(vegetarian or not)
+
+```{python}
+
+#create a list of different words that could indicate a dish is not vegetarian
+meats = [
+    "chicken", "beef", "pork", "bacon", "ham", "turkey", "lamb", "steak",
+    "fish", "salmon", "shrimp", "tuna", "crab", "lobster", "sausage",
+    "duck", "veal", "goat"
+]
+
+df_all["Vegetarian?"] = df_all.apply(lambda row: "No" if any(meat in str(row["Name of Recipe"]).lower() or meat in str(row["Tags(cuisine, diet, etc.)"]).lower() for meat in meats)
+else "Yes", axis=1) 
+#axis=1 to go across each row, checks for meats list in both recipe and tags columns, switch all names to .lower() so theyre not missed if like "Chicken" not "chicken"
+df_all.insert(4, "Vegetarian?", df_all.pop("Vegetarian?")) #removes original Vegetarian? column and reinserts to position 4 instead of being at end
+df_all
+
+```
+
+5. Analyze, Make a visualization that tells a story about nutrition information (available in the Tasty API results) across the week for Mealplan 202. Your visualization should also indicate which meals are vegetarian.
+
+```{python}
+
+from plotnine import *
+
+mealplan202 = df_all.copy()
+
+macros_long = mealplan202.melt(
+    id_vars=["Day of the Week", "Vegetarian?"],
+    value_vars=["Protein(grams)", "Carbohydrates(grams)", "Fat(grams)", "Fiber(grams)", "Sugar(grams)"],
+    var_name="Macro",
+    value_name="grams"
+)
+
+macros_long["grams"] = pd.to_numeric(macros_long["grams"], errors="coerce") #makes grams column numeric
+macros_long = macros_long.dropna(subset=["grams"]) #drops na values
+
+weekday_order = ["Monday","Tuesday","Wednesday","Thursday","Friday"] #order of days of week 
+macros_long["Day of the Week"] = pd.Categorical(macros_long["Day of the Week"], categories=weekday_order, ordered=True) #makes categorical variable ordered in specified order i made
+
+macros_long = macros_long.rename(columns={"Vegetarian?":"Vegetarian"}) #wasn't working properly with question mark in plotnine, needed to be removed
+
+summary = macros_long.groupby(["Vegetarian","Day of the Week","Macro"], as_index=False)["grams"].sum() #groups by vegetarian or not, day of week, and macro and sums the grams
+
+summary["prop"] = (summary.groupby(["Vegetarian","Day of the Week"])["grams"].transform(lambda x: x / x.sum())) #groups the newly made groups by vegetarian and day of week and 
+#take proportion of each macro to total macros for each day
+
+#stacked bar chart of proportions
+(
+    ggplot(summary, aes(x="Day of the Week", y="prop", fill="Macro")) #day of week and proportion of macro filled by the macro
+    + geom_col(position="stack") #stacked bar chart
+    + scale_fill_brewer(type = 'qual', palette='Dark2') #used to change color of bars, like scale_fill_manual but i can choose theme/palette, need to use type = 'qual' to tell 
+    #plotnine that im using a categorical dataset
+    + facet_wrap("~Vegetarian", ncol=2) #makes the facets and splits into two charts yes and no for the graphs
+    + scale_y_continuous(labels=lambda l: [f"{int(v*100)}%" for v in l]) #lambda function to automatically make my proportions % by multiplying by 100 and adding %
+    + labs(title="Vegetarian vs. Non-Vegetarian Macro Composition by Day", #adds titles to chart and axis
+           x="Day of the Week", y="Macro composition", fill="Macro")
+    + theme(axis_text_x=element_text(rotation=45, ha="right"),figure_size=(12, 6))
+)
+
+```
