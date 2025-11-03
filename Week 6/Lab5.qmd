@@ -1,0 +1,679 @@
+---
+title: "Lab 5"
+format:
+  html:
+    theme : cosmo
+    code-fold: true
+    embed-resources: true
+execute:
+    echo: true
+---
+
+[Link to my Github Repository](https://github.com/bigturtle13/GSB544/tree/main/Week%206)
+
+Note: P#:Q# (ex: P1:Q3 means Problem 1, Question 3. I used this to organize my code.)
+
+Import Packages
+```{python}
+import pandas as pd
+import numpy as np
+from plotnine import *
+from sklearn.linear_model import *
+from sklearn.model_selection import *
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import *
+```
+
+
+
+Part One: Data Exploration
+
+P1:Q1
+Read in the dataset, and display some summaries of the data.(Note: this is not a print of full dataset, just first 15 values)
+```{python}
+
+#read in the dataset
+df = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_1.csv")
+
+print(df.head(15)) #First 15 entries of data(NOT THE FULL DATASET JUST A HEAD(20) :D
+
+df.describe() #Summary statistics for data
+
+```
+
+P1:Q2
+Fix any concerns you have about the data.
+```{python}
+
+#fix any concerns with dataset
+na = df.isna().sum()
+#print(na)
+#no na values no need to omit or impute any values
+
+#converts all categorical variables to dummy/indicator variables
+df1 = pd.get_dummies(df) * 1
+
+
+```
+
+P1:Q3
+Make up to three plots comparing the response variable (charges) to one of the predictor variables. briefly discuss each plot
+
+BMI vs. Charges Scatterplot
+```{python}
+
+(
+    ggplot(df1, aes(x='bmi', y='charges')) 
+    + geom_point(alpha=0.6,color = "darkgreen") 
+    +labs(
+        title='Scatter Plot of Charges vs. BMI',
+        x='BMI',
+        y='Charges'
+    )
+)
+
+```
+
+This plot shows the spread of charges data points as the BMI of a subject in the dataset increases. While the majority of points are spread across the bottom of the y-axis meaning there were low medical costs billed by health insurance, the points that begin to slide towards the top are closer to the right side of the y axis. It seems that to some small degree as BMI increases, medical costs billed by health insurance also seem to increase a bit.
+
+Average Charges by Region Bar Chart
+```{python}
+
+avg_chg_by_region = df.groupby('region', as_index=False)['charges'].mean()
+#making sure averages are correct for bars
+#test = df[df['region'] == 'northeast']
+#t2 = test['charges'].mean();t2
+
+(
+    ggplot(avg_chg_by_region, aes(x='region', y='charges',fill = 'region'))
+    + geom_bar(stat='identity')
+    + geom_text(aes(label=round(avg_chg_by_region['charges'], 1)), va = 'bottom') 
+    # add label to top of barss
+    + labs(title='Average Charges by Region', x='Region', y='Average Charges')
+)
+```
+
+This bar chart groups each of the four unique regions in the dataset and finds their average individual medical costs billed by health insurance. The bars make it evident that charges in the southeast are the highest by far with an average of $13,916.8, while the northwest region holds the lowest average of $11,097.20. It would be interesting to then find the average BMI and average age of these regions to see if they have any effect on the higher or lower medical costs.
+
+Charges vs. Age Scatterplot with Regression Trend Line
+```{python}
+
+(
+    ggplot(df1.sort_values('age'), aes(x='age', y='charges'))
+    + geom_point(color='blue', alpha=0.6)  
+    + geom_smooth(method='lm', color='red') # linear regression trend line
+    + labs(
+        title='Charges vs. Age',
+        x='Age',
+        y='Charges'
+    )
+)
+
+```
+
+This plot shows a scatter plot of all data points as age increases. The scatterplot points and the regression line indicate that as the age of a subject increases, the individual costs billed by health insurance also begin to increase. On another note, the data also seems to suggest that extremely high medical costs are common across all ages, but they are not as common as the data points seemingly setting the trend for charges.
+
+
+
+Part Two: Simple Linear Models
+
+P2:Q1
+Construct a simple linear model to predict the insurance charges from the beneficiary’s age. Discuss the model fit, and interpret the coefficient estimates.
+
+```{python}
+
+x = df1[['age']] 
+y = df1['charges']
+
+model = LinearRegression()
+model.fit(x,y)
+
+y_pred = model.predict(x)
+
+#looked up how to get these values
+print(f"Intercept (β0): {model.intercept_:.2f}")
+print(f"Coefficient (β1 for age): {model.coef_[0]:.2f}") 
+
+r2 = r2_score(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+#rmse = np.sqrt(mse), chose to use R squared and MSE, don't need
+#mad = mean_absolute_error(y, y_pred), chose to use R squared and MSE, don't need
+print(f"R-squared: {r2:.3f}")
+print(f"MSE: {mse:.2f}")
+#print(f"RMSE: {rmse:.2f}"), chose to use R squared and MSE, don't need
+#print(f"MAD: {mad:.2f}"), chose to use R squared and MSE, don't need
+```
+
+Model 1 which uses only age as a predictor, is a poor fit using R squared and MSE as evaluators. The R squared is below 0.1 which is extremely low and means that age alone can only explain about 9.9% of the variation in charges. Additionally, the MSE value of 126739267.91 is extremely high and indicates there are large errors in the predictions. With an intercept coefficient of $3611.76, this means this is the baseline average cost of a charge. Every additional unit in age is associate with a $228.80 increase in charges.
+
+P2:Q2
+Make a model that also incorporates the variable sex. Report your results.
+
+```{python}
+
+x = df1[['age', 'sex_female']] 
+y = df1['charges']
+
+model = LinearRegression()
+model.fit(x,y)
+
+y_pred = model.predict(x)
+
+#looked up how to get these values
+print(f"Intercept (β0): {model.intercept_:.2f}")
+print(f"Coefficient (β1 for age): {model.coef_[0]:.2f}") 
+print(f"Coefficient (β2 for sex_female): {model.coef_[1]:.2f}") 
+
+r2 = r2_score(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+print(f"R-squared: {r2:.3f}")
+print(f"MSE: {mse:.2f}")
+```
+
+Model 2 which uses both age as well as sex as predictors is not much better of a fit than model 1. Model 2 has a R squared value of 0.1, meaning that the model can only explain for about 10% of variation in charges. Like Model 1 it also has an extremely high MSE value(126633939.68), indicating predictions are very far off actual values. The intercept of the model means that the baseline cost of a charge in Model 2 is about $3965.16. The coefficient value B1 representing age, means that there is an approximate $228.43 increase in charges for each unit increase in wage. Holding age constant, the coefficient value B2 represents the change in charges estimated based on whether the subject is female. For female subjects, charges are approximately -$649.83 lower males.
+
+P2:Q3
+Now make a model that does not include sex, but does include smoker. Report your results.
+
+```{python}
+
+x = df1[['age', 'smoker_no']] 
+y = df1['charges']
+
+model = LinearRegression()
+model.fit(x,y)
+
+y_pred = model.predict(x)
+
+#looked up how to get these values
+print(f"Intercept (β0): {model.intercept_:.2f}")
+print(f"Coefficient (β1 for age): {model.coef_[0]:.2f}") 
+print(f"Coefficient (β2 for smoker_no): {model.coef_[1]:.2f}") 
+
+r2 = r2_score(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+print(f"R-squared: {r2:.3f}")
+print(f"MSE: {mse:.2f}")
+```
+
+Model 3 performs significantly better than both of the previous models, as it has a much lower MSE value and a much higher R squared value. Model 3 is a very good fit. Model 3 has an R squared value of 0.76, meaning that it can explain for about 76% percent of the variation in charges. Additionally, it's MSE of 33719831.47 is smaller than both of the previous models' MSEs, meaning it's prediction estimates are much closer to the actual values being predicted. The intercept value of Model 3, indicates that the baseline charge holding all predictors constant is about $21,882.02. The coefficient of age, 253.15 means that for each additional unit increase in age, charges rise by about $235.15 holding other predictors constant. Similarly, the coefficient of -24,048.87 for smoker_no indicated that charges are about $24,048.87 lower for individuals who do not smoke compared to those who do.
+
+P2:Q4
+Which model (Q2 or Q3) do you think better fits the data? Justify your answer by calculating the MSE for each model, and also by comparing R-squared values
+```{python}
+
+x = df1.drop('charges', axis=1) #keeps all columns but the response
+y = df1['charges']
+
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=1031)
+
+models = {
+    "Model 1": ['age'], 
+    #Construct a simple linear model to predict the insurance charges from the beneficiary’s age. 
+    "Model 2": ['age', 'sex_female',], #used sex_male as reference, avoid multicollinearity
+    #Make a model that also incorporates the variable sex.
+    "Model 3": ['age', 'smoker_no'], #used smoker_yes as reference, avoid milticollinearity
+    #Now make a model that does not include sex, but does include smoker.
+}
+
+rows = []
+for name, Xcols in models.items():
+    X = x_train[Xcols]
+    model = LinearRegression().fit(X, y_train)
+    y_test_ = model.predict(x_test[Xcols])
+    x_test[f"{name}_predict"] = y_test_
+    test_rmse = np.sqrt(mean_squared_error(y_test, y_test_))
+    test_r2 = r2_score(y_test, y_test_)
+    y_test_ = x_test[f"{name}_predict"]
+    mse = mean_squared_error(y_test, y_test_)
+    mad = mean_absolute_error(y_test, y_test_)
+    rows.append({"Model": name,"Intercept": model.intercept_,"Test RMSE": test_rmse, "Test R2": test_r2, "Test MSE": mse, "Test MAD": mad})
+test_error = pd.DataFrame(rows)
+
+#Which model (Q2 or Q3) do you think better fits the data? Justify your answer by #calculating the MSE for each model, and also by comparing R-squared values
+test_error
+```
+
+After comparing the MSE for each of my values I believe that Model 3 is the best fit for the data as it has the lowest MSE value as well as the highest R squared value in comparison to Models 1 and 2. The MSE of Model 3 was only 4.19 x 10^7, while Model 1 and 2 both had MSEs of a bout 1.48 x 10^8, considerably more. Furthermore, Model 3's high R squared value indicated that it could explain for about 73% of the variation in charges, whereas the other two models could explain less than 6%. Considering all other metrics, Model 3 also has the most desirable values, so therefore, Model 3 is the best fit for this data.
+
+
+
+Part Three: Multiple Linear Models
+
+P3:Q1
+Fit a model that uses age and bmi as predictors. (Do not include an interaction term, age*bmi, between these two.) Report your results. How does the MSE compare to the model in Part Two Q1? How does the R-squared compare?
+
+```{python}
+
+x = df1[['age', 'bmi']] 
+y = df1['charges']
+
+model1 = LinearRegression()
+model1.fit(x,y)
+
+y_pred = model1.predict(x)
+
+r2 = r2_score(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+print(f"R-squared: {r2:.3f}")
+print(f"MSE: {mse:.2f}")
+
+print(f"Intercept (β0): {model1.intercept_:.2f}")
+print(f"Coefficient (β1 for age): {model1.coef_[0]:.2f}") 
+print(f"Coefficient (β2 for bmi): {model1.coef_[1]:.2f}") 
+
+```
+
+This model is a poor fit for the data. With an R squared value of 0.12, this model can only explain about 12% of the variation in the response variable, charges. It also has an extrememly high MSE value meaning it's predictions are likely off by a large amount. Having an intercept of -4627.53 means the baseline cost for a subject in this model is -$4627.53. Holding other predictors constant, a one unit increase in age results in about a $216.30 increase in charges, while a one unit increase in bmi results in about a $283.20 increase in charges. Comparing this to Part 2 Q1, this model is stronger, but that doesn't mean its a good fit. The reason I can say this model is stronger is because it's MSE value is smaller(123792439.58 < 126739267.91) meaning predictions are off by less, and it's R squared value is higher meaning slightly more variation in charges can be explained by the model(0.12 > 0.099).
+
+P3:Q2
+Perhaps the relationships are not linear. Fit a model that uses age and age^2 as predictors. How do the MSE and R-squared compare to the model in P2 Q1?
+
+```{python}
+df1['ageS'] = df1['age']**2
+x = df1[['age', 'ageS']] 
+y = df1['charges']
+
+model2 = LinearRegression()
+model2.fit(x,y)
+
+y_pred = model2.predict(x)
+
+r2 = r2_score(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+print(f"R-squared: {r2:.3f}")
+print(f"MSE: {mse:.2f}")
+
+```
+
+Compared to the model in P2 Q1, this model is barely better. Not only does it have a slightly higher R squared(0.10 > 0.099) than the previous model, but it also has a lower MSE meaning that predicted values are off by less(126739267.91 > 126710293.81). The nonlinear term age^2 helps to strengthen the fit and capture curvature that is present in the model.
+
+P3:Q3
+Fit a polynomial model of degree 4. How do the MSE and R-squared compare to the model in P2 Q1?
+
+```{python}
+
+df1['ageS'] = df1['age']**2
+df1['ageS3'] = df1['age']**3
+df1['ageS4'] = df1['age']**4
+x = df1[['age', 'ageS', 'ageS3', 'ageS4']] 
+y = df1['charges']
+
+model3 = LinearRegression()
+model3.fit(x,y)
+
+y_pred = model3.predict(x)
+
+r2 = r2_score(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+print(f"R-squared: {r2:.3f}")
+print(f"MSE: {mse:.2f}")
+
+```
+
+Comparing this model again to P2 Q1, this model is better, and it improves slightly more than the previous model that used only age and age squared did. Compared to P2 Q1, it has a lower MSE(125550389.65 < 126739267.91) as well as a higher R squared value(0.108 > 0.099). 
+
+P3:Q4
+
+```{python}
+
+df1['ageS'] = df1['age']**2
+df1['ageS3'] = df1['age']**3
+df1['ageS4'] = df1['age']**4
+df1['ageS5'] = df1['age']**5
+df1['ageS6'] = df1['age']**6
+df1['ageS7'] = df1['age']**7
+df1['ageS8'] = df1['age']**8
+df1['ageS9'] = df1['age']**9
+df1['ageS10'] = df1['age']**10
+df1['ageS11'] = df1['age']**11
+df1['ageS12'] = df1['age']**12
+x = df1[['age', 'ageS', 'ageS3', 'ageS4', 'ageS5', 'ageS6', 'ageS7', 'ageS8', 'ageS9', 'ageS10','ageS11', 'ageS12']] 
+y = df1['charges']
+
+model4 = LinearRegression()
+model4.fit(x,y)
+
+y_pred = model4.predict(x)
+
+r2 = r2_score(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+print(f"R-squared: {r2:.3f}")
+print(f"MSE: {mse:.2f}")
+
+```
+
+Comparing this model again to P2 Q1, this model is better, and it improves slightly more than the previous model that used only age and age squared did. Compared to P2 Q1, it has a lower MSE(125373053.69 < 126739267.91) as well as a higher R squared value(0.109 > 0.099). 
+
+P3:Q5
+According to the MSE and R-squared, which is the best model? Do you agree that this is indeed the “best” model? Why or why not?
+
+According to just the MSE and R-squared it is evident the best model would be that of P3:Q5 as it has the lowest MSE and the highest R-squared values(125373053.69, 0.109). I would not agree that this is the "best model". My reason being that although including more polynomial terms and increasing the complexity of the model only marginally increases the value of the R-squared(from 0.099 to 0.109 after adding 11 terms). In order to get the best model, stronger predictors like an individual's smoking status are needed to see meaningful improvements in model fit(like in P2:Q3).
+
+P3:Q6
+Plot the predictions from your model in Q4 as a line plot on top of the scatterplot of your original data.
+
+```{python}
+y_pred = model4.predict(x) #using newest model, i already have this, easier to read though
+
+#copies df1 and adds predictions as a column
+m4 = df1.copy()
+m4['ypred'] = y_pred
+
+#sorts by age, 
+(
+    ggplot(m4.sort_values('age'), aes(x='age', y='charges')) 
+    + geom_point(alpha=0.5, color='teal') #i like teal stands out well
+    + geom_line(aes(y='ypred'), color='red', size=1.2) 
+    + labs(
+        title='Charges vs Age (12th Degree Polynomial Fit)',
+        x='Age',
+        y='Charges'
+    ) 
+    #+ theme_classic() doesnt look good
+    + theme_minimal() #looks way better
+)
+
+```
+
+
+
+Part Four: New data
+
+P4:Q1
+
+For each model, fit the model on the original data.
+Then, use the fitted model to predict on the new data.
+
+Model with age 
+
+```{python}
+
+train = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_1.csv")
+test = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_2.csv")
+#na
+#na = df.isna().sum()
+train = pd.get_dummies(train) * 1
+test = pd.get_dummies(train) * 1
+
+#fit model only on original data(training data)
+xtrain = train[['age']]
+ytrain = train['charges']
+
+#fit linear model to training data
+m5 = LinearRegression()
+m5.fit(xtrain, ytrain)
+
+#use training data to predict charges from test data
+X_new = test[['age']]
+y_pred_new = m5.predict(X_new)
+
+#get MSE from new data
+mse_new_1 = mean_squared_error(test['charges'], y_pred_new)
+print(f"Model MSE: {mse_new_1:.2f}")
+
+```
+
+Model with age and bmi and predictors
+
+```{python}
+
+train = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_1.csv")
+test = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_2.csv")
+#na
+#na = df.isna().sum()
+train = pd.get_dummies(train) * 1
+test = pd.get_dummies(train) * 1
+
+#fit model only on original data(training data)
+xtrain = train[['age', 'bmi']]
+ytrain = train['charges']
+
+#fit linear model to training data
+m6 = LinearRegression()
+m6.fit(xtrain, ytrain)
+
+#use training data to predict charges from test data
+X_new = test[['age', 'bmi']]
+y_pred_new = m6.predict(X_new)
+
+#get MSE from new data
+mse_new_2 = mean_squared_error(test['charges'], y_pred_new)
+print(f"Model MSE: {mse_new_2:.2f}")
+
+```
+
+Model with age, bmi, smoker as predictors
+
+```{python}
+
+train = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_1.csv")
+test = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_2.csv")
+#na
+#na = df.isna().sum()
+train = pd.get_dummies(train) * 1
+test = pd.get_dummies(train) * 1
+
+#fit model only on original data(training data)
+xtrain = train[['age', 'bmi', 'smoker_no']]
+ytrain = train['charges']
+
+#fit linear model to training data
+m7 = LinearRegression()
+m7.fit(xtrain, ytrain)
+
+#use training data to predict charges from test data
+X_new = test[['age', 'bmi', 'smoker_no']]
+y_pred_new = m7.predict(X_new)
+
+#get MSE from new data
+mse_new_3 = mean_squared_error(test['charges'], y_pred_new)
+print(f"Model MSE: {mse_new_3:.2f}")
+
+```
+
+Model with age, bmi, and interactive term with smoker as predictors [~ (age + bmi):smoker]
+
+```{python}
+
+train = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_1.csv")
+test = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_2.csv")
+#na
+#na = df.isna().sum()
+train = pd.get_dummies(train) * 1
+test = pd.get_dummies(test) * 1
+
+#new interaction term
+train['age_smoker'] = train['age'] * train['smoker_yes']
+train['bmi_smoker'] = train['bmi'] * train['smoker_yes']
+
+test['age_smoker'] = test['age'] * test['smoker_yes']
+test['bmi_smoker'] = test['bmi'] * test['smoker_yes']
+
+#fit model only on original data(training data)
+xtrain = train[['age_smoker', 'bmi_smoker']]
+ytrain = train['charges']
+
+#fit linear model to training data
+m8 = LinearRegression()
+m8.fit(xtrain, ytrain)
+
+#use training data to predict charges from test data
+X_new = test[['age_smoker', 'bmi_smoker']]
+y_pred_new = m8.predict(X_new)
+
+#get MSE from new data
+mse_new_4 = mean_squared_error(test['charges'], y_pred_new)
+print(f"Model MSE: {mse_new_4:.2f}")
+
+```
+
+Model with age, bmi, smoker with interaction term with smoker as predictors [~ (age + bmi):smoker]
+
+```{python}
+
+train = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_1.csv")
+test = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_2.csv")
+#na
+#na = df.isna().sum()
+train = pd.get_dummies(train) * 1
+test = pd.get_dummies(test) * 1
+
+#new interaction term
+train['age_smoker'] = train['age'] * train['smoker_yes']
+train['bmi_smoker'] = train['bmi'] * train['smoker_yes']
+
+test['age_smoker'] = test['age'] * test['smoker_yes']
+test['bmi_smoker'] = test['bmi'] * test['smoker_yes']
+
+#fit model only on original data(training data)
+xtrain = train[['age', 'bmi', 'smoker_yes', 'age_smoker', 'bmi_smoker']]
+ytrain = train['charges']
+
+#fit linear model to training data
+m9 = LinearRegression()
+m9.fit(xtrain, ytrain)
+
+#use training data to predict charges from test data
+X_new = test[['age', 'bmi', 'smoker_yes', 'age_smoker', 'bmi_smoker']]
+y_pred_new5 = m9.predict(X_new)
+
+#get MSE from new data
+mse_new_5 = mean_squared_error(test['charges'], y_pred_new5)
+print(f"Model MSE: {mse_new_5:.2f}")
+
+```
+
+P4:Q2
+Report the MSE for each model’s new predictions. Based on this, which is the best model to use?
+
+```{python}
+mse_table = pd.DataFrame({ #manually create columns to display MSE values for each model
+    "Model": [
+        "Model 1: age",
+        "Model 2: age + bmi",
+        "Model 3: age + bmi + smoker",
+        "Model 4: (age + bmi):smoker",
+        "Model 5: (age + bmi)*smoker"
+    ],
+    "MSE": [mse_new_1, mse_new_2, mse_new_3, mse_new_4, mse_new_5]
+}).sort_values("MSE", ascending=True)
+
+print(mse_table)
+```
+
+Based upon the five models that we tested and the MSE values calculated, the best model that can be used is the last model which uses age, bmi, and smoker as predictors, with both quantitative variables having an interaction term with smoker (i.e. the formula ~ (age + bmi)*smoker).
+
+P4:Q3
+Make a plot showing the residuals of your final chosen model.
+
+```{python}
+#adding predictions and residuals to test, calculating residuals
+test['predicted_charges'] = y_pred_new5 # predictions from Model 5
+test['residuals'] = test['charges'] - test['predicted_charges']
+
+#residual plot
+(
+    ggplot(test, aes(x='predicted_charges', y='residuals')) 
+    + geom_point(alpha=0.6, color='purple') 
+    + geom_hline(yintercept=0, color='black', linetype='dashed') #adds line at 0 to show shift from positive to negative values easier
+    + labs(
+        title='Residuals vs Predicted Charges (Model 5)',
+        x='Predicted Charges',
+        y='Residuals'
+    ) 
+    + theme_minimal()
+)
+```
+
+Part Five: Full Exploration
+
+P5:Q1
+Using any variables in this dataset, and any polynomial of those variables, find the model that best predicts on the new data after being fit on the original data.
+
+```{python}
+train = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_1.csv")
+test = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/insurance_costs_2.csv")
+#na
+#na = df.isna().sum()
+train = pd.get_dummies(train) * 1
+test = pd.get_dummies(test) * 1
+
+#new interaction term
+train['age_smoker'] = train['age'] * train['smoker_yes']
+train['bmi_smoker'] = train['bmi'] * train['smoker_yes']
+train['bmiS'] = train['bmi']**2
+train['fem_smoker'] = train['sex_female'] * train['smoker_yes']
+#train['bmiS3'] = train['bmi']**3 made model worse
+
+
+test['age_smoker'] = test['age'] * test['smoker_yes']
+test['bmi_smoker'] = test['bmi'] * test['smoker_yes']
+test['bmiS'] = test['bmi']**2
+test['fem_smoker'] = test['sex_female'] * test['smoker_yes'] 
+#interaction between smoker and female, doesn't improve model at all(based on R squared which is the same), MSE higher by 75985, but get more info,(negligible in my opinion with MSE values in 21 million plus range)
+#test['bmiS3'] = test['bmi']**3 made model worse
+
+
+#adding regions makes model slightly worse
+#adding sex makes model very slightly worse(.01), but you get information out of it
+#fit model only on original data(training data)
+xtrain = train[['age', 'bmi', 'smoker_yes', 'age_smoker', 'bmi_smoker', 'bmiS', 'fem_smoker']]
+ytrain = train['charges']
+
+#fit linear model to training data
+m10 = LinearRegression()
+m10.fit(xtrain, ytrain)
+
+#use training data to predict charges from test data
+X_new = test[['age', 'bmi', 'smoker_yes','age_smoker', 'bmi_smoker', 'bmiS', 'fem_smoker']]
+y_pred_new6 = m10.predict(X_new)
+
+#get MSE from new data
+mse_new_6 = mean_squared_error(test['charges'], y_pred_new6)
+r2_new6 = r2_score(test['charges'], y_pred_new6)
+print(f"Model R-Squared: {r2_new6:.3f}")
+print(f"Model MSE: {mse_new_6:.2f}")
+
+```
+
+Comparing MSE and R-Squared of Model 5(Best Model) and My Model
+
+```{python}
+r2_new5 = r2_score(test['charges'], y_pred_new5)
+
+table = pd.DataFrame({ #manually create columns to display MSE values for each model
+    "Model": [
+        "(age + bmi)*smoker",
+        "age + bmi + smoker_yes + age_smoker + bmi_smoker + bmiS + fem_smoker"
+    ],
+    "MSE": [mse_new_5, mse_new_6],
+    "R-Squared":[r2_new5, r2_new6]
+}).sort_values("MSE", ascending=True)
+
+print(table)
+```
+
+My table shows that my model is a slightly better fit than the previous best fit model(Model 5). I achieved this by adding the interaction term fem_smoker(sex_female * smoker_yes), and the bmiS variable(BMI^2).
+
+P5:Q2
+Make a plot showing the residuals of your final chosen model.
+
+```{python}
+#adding predictions and residuals to test, calculating residuals
+test['predicted_charges'] = y_pred_new6 # predictions from My Model
+test['residuals'] = test['charges'] - test['predicted_charges']
+
+#residual plot
+(
+    ggplot(test, aes(x='predicted_charges', y='residuals')) 
+    + geom_point(alpha=0.6, color='violet') 
+    + geom_hline(yintercept=0, color='black', linetype='dashed') #adds line at 0 to show shift from positive to negative values easier
+    + labs(
+        title='Residuals vs Predicted Charges (My Model)',
+        x='Predicted Charges',
+        y='Residuals'
+    ) 
+    + theme_minimal()
+)
+```
