@@ -1,0 +1,875 @@
+---
+title: "Lab 6"
+format:
+  html:
+    theme : cosmo
+    code-fold: true
+    embed-resources: true
+jupyter: gsb544
+execute:
+    echo: true
+---
+
+[Link to my Github Repository](https://github.com/bigturtle13/GSB544/tree/main/Week7)
+
+**Import Packages**
+
+```{python}
+
+import pandas as pd
+import numpy as np
+from plotnine import *
+from sklearn.pipeline import Pipeline
+from sklearn.compose import make_column_selector, ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.model_selection import cross_val_score, GridSearchCV
+import matplotlib.pyplot as plt
+from sklearn.metrics import *
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+```
+
+**Part 0. Data Cleaning**
+
+```{python}
+df = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 6/Hitters.csv")
+#fix any concerns with dataset
+
+#na = df.isna().sum()
+#print(na) had 59 na values in salary
+#tot = len(df);tot # total number of observations
+#percent missing
+#m = 59/322;m
+#About 18.3% of the data for Salaries is missing, this is a significant amount, rather than omitting the data, I will choose to impute it using the mean Salary
+#Mean Salary
+#meanSalary = np.mean(df['Salary']);meanSalary #meanSalary = 535.9258821292775
+#Replace na values in Salary
+#df['Salary']=df['Salary'].fillna(meanSalary)
+#Recheck na values
+#na = df.isna().sum()
+#print(na) Now has 0 NAs
+
+#This was my original strategy for fixing the missing values as to me 18.3% seemed like a large portion of the data; However, after talking to some classmates and doing some research, I found that its uncommon to impute the target variable itself as it can distort coefficient estimates and error metrics. This also ensures the model is only learning from observed outcomes not made up ones, if it was one of my features, it might be more reasonable to impute the 18.3% of values.
+
+#instead I will drop the values
+df = df.dropna(subset=['Salary']).copy()
+
+X = df.drop("Salary", axis=1)
+y = df["Salary"]
+
+
+```
+
+
+**Part I. Different Model Specs**
+
+**A: Regression without regularization**
+
+**1. Create a pipeline that includes all the columns as predictors for Salary, and performs ordinary linear regression**
+```{python}
+
+ct = ColumnTransformer(
+    transformers = [
+        ("dummify",
+         OneHotEncoder(drop = "first", sparse_output=False, handle_unknown='ignore'),
+         make_column_selector(dtype_include=object)),
+        ("standardize",
+         StandardScaler(),
+         make_column_selector(dtype_include=np.number))
+    ],
+    remainder="passthrough"
+)
+
+lr_pipeline = Pipeline([
+    ("preprocessing", ct),
+    ("linear_regression", LinearRegression())
+])
+
+```
+
+
+**2. Fit this pipeline to the full dataset, and interpret a few of the most important coefficients.**
+```{python}
+
+lr_pipeline.fit(X, y)
+
+#extract OLS coefficients
+coefs = lr_pipeline.named_steps["linear_regression"].coef_;coefs
+
+featurenames = lr_pipeline.named_steps["preprocessing"].get_feature_names_out() # this gives us the actual names of each coefficient
+
+df_coef = pd.DataFrame({"feature": featurenames, "coef": coefs}) #makes data frame with coefficient values and names mapped to each other
+
+#strongest positive and negative coefficients for interpretation(top 4 for both)
+print("Top 5 +/- coefficients (largest positive/or negative effects on Salary):")
+print(df_coef.sort_values(by="coef", key=lambda s: np.abs(s), ascending=False).head(5))
+
+```
+
+- All else held constant, a one standard deviation increase in a player’s career runs is associated with a predicted 1987 salary about $480,747 higher.
+- All else held constant, a one standard deviation increase in a player’s number of times at bat in his career is associated with a predicted 1987 salary about $391,038 less.
+- All else held constant, a one standard deviation increase in a player’s number of hits in 1986 is associated with a predicted 1987 salary about $337,830 higher.
+- All else held constant, a one standard deviation increase in a player’s number of times at bat in 1986 is associated with a predicted 1987 salary about $291,094 less.
+- All else held constant, a one standard deviation increase in a player’s number of runs batted in during his career is associated with a predicted 1987 salary about $260,689 higher.
+
+
+**3. Use cross-validation to estimate the MSE you would expect if you used this pipeline to predict 1989 salaries.**
+```{python}
+
+mse_lr = -cross_val_score(lr_pipeline, X, y,
+                       cv=5,
+                       scoring="neg_mean_squared_error")
+
+rsquared_lr  = cross_val_score(lr_pipeline, X, y, #extra metrics I added for comparison later
+                      cv=5,
+                      scoring="r2")
+
+print(f"Cross validated MSE: {mse_lr.mean():.3f}")
+print(f"Cross validated R Squared : {rsquared_lr.mean():.3f}")
+
+```
+
+
+**B. Ridge regression**
+
+**1. Create a pipeline that includes all the columns as predictors for Salary, and performs ordinary ridge regression**
+```{python}
+
+#ridge pipeline
+ridge_pipeline = Pipeline(steps=[
+    ("preprocessing", ct),
+    ("ridge_regression", Ridge(max_iter=100000, alpha = 1))  
+]).set_output(transform="pandas")
+
+```
+
+
+**2. Use cross-validation to tune the λ hyperparameter.**
+```{python}
+
+alphas = {'ridge_regression__alpha': np.array([100, 10, 1, 0.1, 0.01])}
+
+gscv = GridSearchCV(estimator = ridge_pipeline, param_grid=alphas, cv = 5, scoring='neg_mean_squared_error')
+
+gscv.fit(X,y)
+
+best_alpha = gscv.best_params_["ridge_regression__alpha"]
+print(f"Best λ (alpha): {best_alpha:.4f}")
+
+```
+
+
+**3. Fit the pipeline with your chosen λ to the full dataset, and interpret a few of the most important coefficients.**
+```{python}
+
+#similar concept to previous part, organized a table with the coefficients and the names of the coefficients
+best_ridge_pipeline = gscv.best_estimator_
+ridge_coefs = best_ridge_pipeline.named_steps["ridge_regression"].coef_
+feature_names = best_ridge_pipeline.named_steps["preprocessing"].get_feature_names_out()
+ridge_coef_df = pd.DataFrame({"feature": feature_names, "coef": ridge_coefs})
+
+#strongest positive and negative coefficients for interpretation(top 5 for both)
+print("Top 5 +/- coefficients (largest positive/or negative effects on Salary):")
+print(ridge_coef_df.sort_values(by="coef", key=lambda s: np.abs(s), ascending=False).head(5))
+
+```
+
+- All else held constant, a one standard deviation increase in a player’s number of runs in his career is associated with a predicted 1987 salary about $320,802 higher.
+- All else held constant, a one standard deviation increase in a player’s number of hits in 1986 is associated with a predicted 1987 salary about $296,801 higher.
+- All else held constant, a one standard deviation increase in a player’s number of times at bat in 1986 is associated with a predicted 1987 salary about $271,088 less.
+- All else held constant, a one standard deviation increase in a player’s number of times at bat during his career is associated with a predicted 1987 salary about $225,511 less.
+- All else held constant, a one standard deviation increase in a player’s number of walks during his career is associated with a predicted 1987 salary about $184,289 less.
+
+
+**4.Report the MSE you would expect if you used this pipeline to predict 1989 salaries.**
+```{python}
+
+mse_ridge = -cross_val_score(
+    best_ridge_pipeline,
+    X, y,
+    cv=5,
+    scoring="neg_mean_squared_error"
+)
+r2_ridge = cross_val_score( #extra metric I added
+    best_ridge_pipeline,
+    X, y,
+    cv=5,
+    scoring="r2"
+)
+
+print(f"Cross validated MSE (Ridge λ={best_alpha:.3f}): {mse_ridge.mean():.3f}")
+print(f"Cross validated R squared (Ridge): {r2_ridge.mean():.3f}") #extra for comparison
+
+```
+
+
+**C. Lasso Regression**
+
+**1. Create a pipeline that includes all the columns as predictors for Salary, and performs ordinary ridge regression**
+```{python}
+
+#lasso pipeline
+lasso_pipeline = Pipeline(steps=[
+    ("preprocessing", ct),
+    ("lasso_regression", Lasso(max_iter=100000, alpha = 1))
+]).set_output(transform="pandas")
+
+```
+
+
+**2. Use cross-validation to tune the λ hyperparameter.**
+```{python}
+
+alphas = {'lasso_regression__alpha': np.array([100, 10, 1, 0.1, 0.01])}
+
+lasso_gscv = GridSearchCV(
+    estimator=lasso_pipeline,
+    param_grid=alphas,
+    cv=5,
+    scoring="neg_mean_squared_error"
+)
+
+lasso_gscv.fit(X, y)
+
+best_alpha_lasso = lasso_gscv.best_params_['lasso_regression__alpha']
+print(f"Best λ (alpha) for LASSO: {best_alpha_lasso}")
+
+```
+
+
+**3. Fit the pipeline with your chosen λ to the full dataset, and interpret a few of the most important coefficients.**
+```{python}
+
+best_lasso_pipeline = lasso_gscv.best_estimator_
+lasso_coefs = best_lasso_pipeline.named_steps["lasso_regression"].coef_
+feature_names = best_lasso_pipeline.named_steps["preprocessing"].get_feature_names_out()
+lasso_coef_df = pd.DataFrame({"feature": feature_names, "coef": lasso_coefs})
+
+#strongest positive and negative coefficients for interpretation(top 5 for both)
+print("Top 5 +/- coefficients (largest positive/or negative effects on Salary):")
+print(lasso_coef_df.sort_values(by="coef", key=lambda s: np.abs(s), ascending=False).head(5))
+
+```
+
+- All else held constant, a one standard deviation increase in a player’s number of runs during his career is associated with a predicted 1987 salary about $375,565 higher.
+- All else held constant, a one standard deviation increase in a player’s number of hits in 1986 is associated with a predicted 1987 salary about $304,359 higher.
+- All else held constant, a one standard deviation increase in a player’s times at bat in 1986 is associated with a predicted 1987 salary about $282,370 lower.
+- All else held constant, a one standard deviation increase in a player’s number of runs batted in during his career is associated with a predicted 1987 salary about $192,610 higher.
+- All else held constant, a one standard deviation increase in a player’s number of walks during his career is associated with a predicted 1987 salary about $189,644 lower.
+
+
+**4.Report the MSE you would expect if you used this pipeline to predict 1989 salaries.**
+```{python}
+
+mse_lasso = -cross_val_score(
+    best_lasso_pipeline,
+    X, y,
+    cv=5,
+    scoring="neg_mean_squared_error"
+)
+r2_lasso = cross_val_score( #extra metric I added
+    best_lasso_pipeline,
+    X, y,
+    cv=5,
+    scoring="r2"
+)
+
+print(f"Cross validated MSE (Lasso λ={best_alpha_lasso:.3f}): {mse_lasso.mean():.3f}")
+print(f"Cross validated R squared (Lasso): {r2_lasso.mean():.3f}") #extra for comparison
+
+```
+
+
+**D. Elastic Net**
+
+**1. Create a pipeline that includes all the columns as predictors for Salary, and performs ordinary ridge regression**
+```{python}
+
+#elastic pipeline
+elastic_pipeline = Pipeline(steps=[
+    ("preprocessing", ct),
+    ("elastic_regression", ElasticNet(max_iter=100000, alpha = 1))
+]).set_output(transform="pandas")
+
+
+```
+
+
+**2. Use cross-validation to tune the λ and α hyperparameters.**
+```{python}
+
+param_grid = {
+    'elastic_regression__alpha': [0.001, 0.01, 0.1, 1, 10, 100],
+    'elastic_regression__l1_ratio': [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+}
+elasticgrid = GridSearchCV(elastic_pipeline, param_grid, cv=5, scoring='neg_mean_squared_error')
+elasticgrid.fit(X, y)
+
+best_alpha_elastic = elasticgrid.best_params_['elastic_regression__alpha']
+best_l1ratio_elastic = elasticgrid.best_params_['elastic_regression__l1_ratio']
+print(f"Best λ (alpha) for Elastic Net: {best_alpha_elastic:.3f}")
+print(f"Best α (l1_ratio) for Elastic Net: {best_l1ratio_elastic:.3f}")
+
+```
+
+
+**3. Fit the pipeline with your chosen λ and α to the full dataset, and interpret a few of the most important coefficients.**
+```{python}
+
+best_elastic_pipeline = elasticgrid.best_estimator_
+elastic_coefs = best_elastic_pipeline.named_steps["elastic_regression"].coef_
+feature_names = best_elastic_pipeline.named_steps["preprocessing"].get_feature_names_out()
+elastic_coef_df = pd.DataFrame({"feature": feature_names, "coef": elastic_coefs})
+
+#strongest positive and negative coefficients for interpretation(top 5 for both)
+print("Top 5 +/- coefficients (largest positive/or negative effects on Salary):")
+print(elastic_coef_df.sort_values(by="coef", key=lambda s: np.abs(s), ascending=False).head(5))
+
+```
+
+- All else held constant, a one standard deviation increase in a player’s number of hits in 1986 is associated with a predicted 1987 salary about $200,830 higher.
+- All else held constant, a one standard deviation increase in a player’s number of times at bat in 1986 is associated with a predicted 1987 salary about $186,181 less.
+- All else held constant, a one standard deviation increase in a player’s number of runs during his career is associated with a predicted 1987 salary about $163,907 higher.
+- All else held constant, a one standard deviation increase in a player’s number of walks during his career is associated with a predicted 1987 salary about $125,175 less.
+- All else held constant, a player being a part of the West Division at the end of 1986 is associated with a predicted 1987 salary about $116,818 less.
+
+
+**4.Report the MSE you would expect if you used this pipeline to predict 1989 salaries.**
+```{python}
+
+mse_elastic = -cross_val_score(
+    best_elastic_pipeline,
+    X, y,
+    cv=5,
+    scoring="neg_mean_squared_error"
+)
+r2_elastic = cross_val_score( #extra metric I added
+    best_elastic_pipeline,
+    X, y,
+    cv=5,
+    scoring="r2"
+)
+
+print(f"Cross validated MSE (Elastic λ={best_alpha_elastic:.3f}, Elastic α ={best_l1ratio_elastic:.3f}): {mse_elastic.mean():.3f}")
+print(f"Cross validated R squared (Elastic): {r2_elastic.mean():.3f}") #extra for comparison
+
+```
+
+
+**Initial Comparison of Model MSE Values**
+```{python}
+
+mse_compare = pd.DataFrame({
+    'Model': ['OLS', 'Ridge', 'LASSO', 'Elastic Net'],
+    'Cross Validated MSE': [
+        mse_lr.mean(),
+        mse_ridge.mean(),
+        mse_lasso.mean(),
+        mse_elastic.mean()]});mse_compare.sort_values(by='Cross Validated MSE', ascending=True)
+
+```
+
+The initial best model using all features is the Elastic Net model.
+
+**Part II. Variable Selection**
+
+Based on the above results, decide on:
+
+Which numeric variable is most important.
+
+Which five numeric variables are most important.
+
+Which categorical variable is most important.
+
+
+```{python}
+coef_compare = pd.DataFrame({
+    'Feature': featurenames,
+    'lr': coefs,
+    'ridge': ridge_coefs,
+    'lasso': lasso_coefs,
+    'elastic': elastic_coefs
+})
+
+```
+
+
+**Which numeric variable is most important.**
+```{python}
+
+#create labels for each different type of variable using startswith
+num_var = coef_compare["Feature"].str.startswith("standardize__")
+cat_var = coef_compare["Feature"].str.startswith("dummify__")
+numeric_coefs = coef_compare[num_var].copy()
+categorical_coefs = coef_compare[cat_var].copy()
+
+#make in terms of magnitudes rather than postitive/negative
+for col in ['lr', 'ridge', 'lasso', 'elastic']:
+    numeric_coefs[f'abs_{col}'] = numeric_coefs[col].abs()
+    categorical_coefs[f'abs_{col}'] = categorical_coefs[col].abs()
+
+# most important numeric variable per model, make new df
+most_important_numeric = pd.DataFrame(columns=['Model', 'Feature', 'Coefficient'])
+
+#find top variable for each model, store in df
+#loops over each model
+for model in ['lr', 'ridge', 'lasso', 'elastic']:
+    abs_col = f'abs_{model}'
+    #gets the largest abs value coefficient of each model
+    top_row = numeric_coefs.loc[numeric_coefs[abs_col].idxmax()]
+    #gets feature with that top id as well as coefficient
+    most_important_numeric.loc[len(most_important_numeric)] = [
+        model.upper(),
+        top_row['Feature'],
+        top_row[model]
+    ]
+#prints most important variable of each model
+print("Most Important Numeric Variable (per model):")
+print(most_important_numeric)
+
+```
+
+The most important numeric variable is CRuns(Number of runs during a player's career). It is the most important coefficient in 3/4 of models.
+
+
+**Which five numeric variables are most important.**
+```{python}
+#first i want to just see the top 5 variables in each to see if I can make it easy and rank myself
+top5_numeric = {}
+for model in ['lr', 'ridge', 'lasso', 'elastic']:
+    top5 = (
+        numeric_coefs.sort_values(f'abs_{model}', ascending=False).head(5)[['Feature', model]]
+    )
+
+    top5_numeric[model] = top5
+    
+    print(f"Top 5 Numeric Variables — {model.upper()}")
+    print(top5.to_string(index=False))
+    print()
+
+
+#its hard to rank myself so i will rank based off of average absolute magnitude
+
+```
+
+Its hard to rank myself so I will rank based off of average absolute magnitude.
+
+```{python}
+coef_avg = coef_compare.copy()
+models = ['lr', 'ridge', 'lasso', 'elastic']
+
+#absolute values for each model
+for m in models:
+    coef_avg[f'abs_{m}'] = coef_avg[m].abs()
+#average absolute magnitude for all models
+coef_avg['avg_abs'] = coef_avg[[f'abs_{m}' for m in models]].mean(axis=1)
+
+#sorted by average absolute value
+coef_avg_sorted = coef_avg.sort_values('avg_abs', ascending=False)
+
+#top 10 numeric variables by average absolute coefficient
+top10_numeric_avg = (
+    coef_avg_sorted[coef_avg_sorted['Feature'].str.startswith('standardize__')]
+    [['Feature', 'avg_abs']]     
+    .head(10)
+)
+
+print("Top 10 Numeric Variables (by average absolute magnitude):")
+print(top10_numeric_avg.to_string(index=False))
+
+#printing confirms that the top 5 numeric variables ranked by average absolute
+#magnitude are CRuns, Hits, AtBat, CAtBat, and CRBI. 
+
+```
+
+The top 5 numeric variables ranked by average absolute magnitude are CRuns, Hits, AtBat, CAtBat, and CRBI.
+
+
+**Which categorical variable is most important.**
+```{python}
+
+most_important_categorical = pd.DataFrame(columns=['Model', 'Feature', 'Coefficient'])
+
+for model in ['lr', 'ridge', 'lasso', 'elastic']:
+    abs_col = f'abs_{model}'
+    top_row = categorical_coefs.loc[categorical_coefs[abs_col].idxmax()]
+    most_important_categorical.loc[len(most_important_categorical)] = [
+        model.upper(),
+        top_row['Feature'],
+        top_row[model]
+    ]
+
+print("Most Important Categorical Variable (per model):")
+print(most_important_categorical)
+
+```
+
+The most important categorical variable is dummify__Division_W(whether or not the player was in the West division at the end of the season in 1986, 0 = FALSE, 1 = TRUE).
+
+
+**For each of the four model specifications, compare the following possible feature sets:**
+
+1. Using only the one best numeric variable.
+2. Using only the five best variables.
+3. Using the five best numeric variables and their interactions with the one best categorical variable.
+
+Report which combination of features and model performed best, based on the validation metric of MSE.
+
+(Note: λ and α must be re-tuned for each feature set.)
+
+**1. Using only the one best numeric variable.**
+```{python}
+
+best_num = "CRuns"
+
+gscv.fit(X[[best_num]], y)
+lasso_gscv.fit(X[[best_num]], y)
+elasticgrid.fit(X[[best_num]], y)
+
+#function to compute model MSE using K fold (cv = 5 )
+def cv_mse(model, X, y, cv=5):
+    return -cross_val_score(model, X, y, scoring="neg_mean_squared_error", cv=cv).mean()
+
+#compute using function
+mse_lr_numeric = cv_mse(lr_pipeline, X[[best_num]], y)
+mse_ridge_numeric = cv_mse(gscv.best_estimator_, X[[best_num]], y)
+mse_lasso_numeric = cv_mse(lasso_gscv.best_estimator_, X[[best_num]], y)
+mse_elastic_numeric = cv_mse(elasticgrid.best_estimator_, X[[best_num]], y)
+
+#print results
+print(f"OLS (CRuns only) MSE: {mse_lr_numeric:,.2f}")
+
+print(f"Ridge (CRuns only) MSE: {mse_ridge_numeric:,.2f} | best alpha(λ) = {gscv.best_params_['ridge_regression__alpha']}")
+
+print(f"LASSO (CRuns only) MSE: {mse_lasso_numeric:,.2f} | best alpha(λ) = {lasso_gscv.best_params_['lasso_regression__alpha']}")
+
+print(f"Elastic Net (CRuns only) MSE: {mse_elastic_numeric:,.2f} | "
+      f"best alpha(λ) = {elasticgrid.best_params_['elastic_regression__alpha']}, "
+      f"best l1_ratio(α) = {elasticgrid.best_params_['elastic_regression__l1_ratio']}")
+
+```
+
+When using only the most important numeric variable as a predictor, the best model using MSE as the validation metric is the Ridge Model.
+
+
+**2. Using only the five best variables.**
+```{python}
+
+best5 = ["CRuns", "AtBat", "Hits", "CAtBat", "CRBI"]
+
+gscv.fit(X[best5], y)
+lasso_gscv.fit(X[best5], y)
+elasticgrid.fit(X[best5], y)
+
+#function to compute model MSE using K fold (cv = 5 )
+def cv_mse(model, X, y, cv=5):
+    return -cross_val_score(model, X, y, scoring="neg_mean_squared_error", cv=cv).mean()
+
+#compute using function
+mse_lr_top5 = cv_mse(lr_pipeline, X[best5], y)
+mse_ridge_top5 = cv_mse(gscv.best_estimator_, X[best5], y)
+mse_lasso_top5 = cv_mse(lasso_gscv.best_estimator_, X[best5], y)
+mse_elastic_top5 = cv_mse(elasticgrid.best_estimator_, X[best5], y)
+
+#print results
+print(f"OLS (Top 5 Numeric Variables) MSE: {mse_lr_top5:,.2f}")
+
+print(f"Ridge (Top 5 Numeric Variables) MSE: {mse_ridge_top5:,.2f} | best alpha(λ) = {gscv.best_params_['ridge_regression__alpha']}")
+
+print(f"LASSO (Top 5 Numeric Variables) MSE: {mse_lasso_top5:,.2f} | best alpha(λ) = {lasso_gscv.best_params_['lasso_regression__alpha']}")
+
+print(f"Elastic Net (Top 5 Numeric Variables) MSE: {mse_elastic_top5:,.2f} | "
+      f"best alpha(λ) = {elasticgrid.best_params_['elastic_regression__alpha']}, "
+      f"best l1_ratio(α) = {elasticgrid.best_params_['elastic_regression__l1_ratio']}")
+
+```
+
+When using the top five most important numeric variables as predictors, the best model using MSE as the validation metric is the Ridge Model.
+
+
+**3. Using the five best numeric variables and their interactions with the one best categorical variable.**
+```{python}
+best5 = ["CRuns", "AtBat", "Hits", "CAtBat", "CRBI"]
+best_cat = "Division"  #categorical column (E/W)(most important categorical)
+
+#creates singular column in a df called Division W as indicator variable
+X_dummies = pd.DataFrame({'Division_W': (X['Division'] == 'W').astype(int)})
+X_inter = pd.concat([X[best5], X_dummies], axis=1)#makes new df with 5 most important numeric variables and most important categorical
+
+#creates interaction between each of the top 5 and the Divison W
+for col in best5:
+    X_inter[f"{col}_x_Division_W"] = X_inter[col] * X_inter['Division_W']
+
+gscv.fit(X_inter, y)
+lasso_gscv.fit(X_inter, y)
+elasticgrid.fit(X_inter, y)
+
+#function to compute model MSE using K fold (cv = 5 )
+def cv_mse(model, X, y, cv=5):
+    return -cross_val_score(model, X, y, scoring="neg_mean_squared_error", cv=cv).mean()
+
+#compute using function
+mse_lr_interaction = cv_mse(lr_pipeline, X_inter, y)
+mse_ridge_interaction = cv_mse(gscv.best_estimator_, X_inter, y)
+mse_lasso_interaction = cv_mse(lasso_gscv.best_estimator_, X_inter, y)
+mse_elastic_interaction = cv_mse(elasticgrid.best_estimator_, X_inter, y)
+
+#print results
+print(f"OLS (Top 5 Variables Interaction with Top Categorical) MSE: {mse_lr_interaction:,.2f}")
+
+print(f"Ridge (Top 5 Variables Interaction with Top Categorical) MSE: {mse_ridge_interaction:,.2f} | best alpha(λ) = {gscv.best_params_['ridge_regression__alpha']}")
+
+print(f"LASSO (Top 5 Variables Interaction with Top Categorical) MSE: {mse_lasso_interaction:,.2f} | best alpha(λ) = {lasso_gscv.best_params_['lasso_regression__alpha']}")
+
+print(f"Elastic Net (Top 5 Variables Interaction with Top Categorical) MSE: {mse_elastic_interaction:,.2f} | "
+      f"best alpha(λ) = {elasticgrid.best_params_['elastic_regression__alpha']}, "
+      f"best l1_ratio(α) = {elasticgrid.best_params_['elastic_regression__l1_ratio']}")
+
+```
+
+When using the model with the top 5 numeric variables interacted with the top categorical variable, the best model using the MSE as a validation metric is the Elastic Net model.
+
+
+```{python}
+
+#append all the different MSE values for each model for each feature set into one table
+mse_results = {}
+mse_results['CRuns only'] = {
+    'OLS': mse_lr_numeric,
+    'Ridge': mse_ridge_numeric,
+    'LASSO': mse_lasso_numeric,
+    'Elastic Net': mse_elastic_numeric
+};mse_results
+
+mse_results['Top 5 Numeric'] = {
+    'OLS': mse_lr_top5,
+    'Ridge': mse_ridge_top5,
+    'LASSO': mse_lasso_top5,
+    'Elastic Net': mse_elastic_top5
+};mse_results
+
+mse_results['Top 5 Numeric + Division_W Interactions'] = {
+    'OLS': mse_lr_interaction,
+    'Ridge': mse_ridge_interaction,
+    'LASSO': mse_lasso_interaction,
+    'Elastic Net': mse_elastic_interaction
+};mse_results
+
+#create a dataframe to store all this in formation
+mse_table = (
+    pd.DataFrame(mse_results).T.round(2));mse_table
+
+```
+
+```{python}
+
+best_model_per_row = mse_table.idxmin(axis=1).rename('Best (Lowest MSE)') #column that has name of type of model with lowest MSE for each different feature set
+mse_table_with_best = pd.concat([mse_table, best_model_per_row], axis=1) #adds this column to table
+
+print("Cross validated MSE by feature set and model (lower is better):")
+mse_table_with_best
+
+```
+
+Across all of the models for each different feature set, the best combination of features and model using MSE as a validation metric is the "Top 5 Numeric Variables" using the Ridge modeling method with a λ = 1.0.
+
+
+**Part III. Discussion**
+
+**A. Ridge**
+
+**Compare your Ridge models with your ordinary regression models. How did your coefficients compare? Why does this make sense?**
+
+```{python}
+# OLS and Ridge columns from Part II table
+ridge_vs_ols = mse_table_with_best[['OLS', 'Ridge']].copy()
+
+#difference (OLS - Ridge)
+ridge_vs_ols['MSE Difference (OLS - Ridge)'] = ridge_vs_ols['OLS'] - ridge_vs_ols['Ridge']
+#rounded
+ridge_vs_ols = ridge_vs_ols.round(2)
+
+print("OLS vs Ridge MSE Comparison:")
+ridge_vs_ols
+
+```
+
+For the most important numeric variable(CRuns) model, Ridge and OLS are almost the same. With only one predictor there’s no multicollinearity for Ridge to fix, so both models show the same linear trend between career runs and salary.
+
+In contrast, the top 5 numeric variable and top 5 numeric and interaction variable models include several statistics that are all strongly correlated. OLS tries to assign each of these correlated predictors its own weight, which makes the coefficients large and unstable, whereas ridge adds a small penalty that pulls coefficients toward zero, sharing the predictive power amongst all of them. This gives smaller and more stable coefficients; However, it also gives a a small drop in cross validated MSE values and this was the same in the baseball data.
+
+This behavior makes sense for baseball stats. I saw that the relationships between variables like more hits being associated with higher salary remained the same, but the Ridge model reduces the noise that came up when multiple offensive stats overlap. Based on this and what I've learned, this means Ridge predicts salaries about as accurately as OLS but with less risk of overfitting when several related variables are included.
+
+
+**B. LASSO**
+
+**Compare your LASSO model in I with your three LASSO models in II. Did you get the same results? Why does this make sense? Did you get the same MSEs? Why does this make sense?**
+```{python}
+
+lasso_table = pd.DataFrame({
+    "Model/Feature Set": [
+        "Part I - All Predictors",
+        "Part II - CRuns(Most Important Numeric)",
+        "Part II - Top 5 Numeric",
+        "Part II - Top 5 Numeric + Division_W Interactions"
+    ],
+    "LASSO MSE": [
+        mse_lasso.mean(),                              
+        mse_table_with_best.loc["CRuns only", "LASSO"],
+        mse_table_with_best.loc["Top 5 Numeric", "LASSO"],
+        mse_table_with_best.loc[
+            "Top 5 Numeric + Division_W Interactions", "LASSO"
+        ]
+    ]
+}).round(2)
+
+print("LASSO Models - MSE Comparison (Part I vs II)")
+lasso_table
+
+```
+
+No I did not get the same results for all different models MSE values. This makes sense because Lasso's regularization penalty is most effective when it has a large amount of correlated predictors that can be shrunk or discarded. With less predictors, it's harder to penalize, which make's the performance of the model similar to that of the normal OLS model.
+
+The all predictor Lasso (MSE = 119,758) achieved the lowest error because it was able to shrink and effectively select from many correlated variables. When only a single variable (CRuns) was used, the penalty had almost no impact. Lasso was reduced to a simple linear regression and produced a much higher MSE (MSE = 143,793). Using the top five numeric predictors captured most of the predictive power of the model (MSE = 121,229). By adding Division interactions, this slightly increased MSE (MSE = 122,893) since the additional correlated terms provided limited information in addition what was already there.
+
+
+**C. Elastic Net**
+
+**Compare your MSEs for the Elastic Net models with those for the Ridge and LASSO models. Why does it make sense that Elastic Net always “wins”?**
+```{python}
+
+mse_compare_all = pd.DataFrame({
+    "Model/Feature Set": [
+        "Part I - All Predictors",
+        "Part II - CRuns (Most Important Numeric)",
+        "Part II - Top 5 Numeric",
+        "Part II - Top 5 Numeric + Division_W Interactions"
+    ],
+    "Ridge MSE": [
+        mse_ridge.mean(),
+        mse_table_with_best.loc["CRuns only", "Ridge"],
+        mse_table_with_best.loc["Top 5 Numeric", "Ridge"],
+        mse_table_with_best.loc[
+            "Top 5 Numeric + Division_W Interactions", "Ridge"
+        ]
+    ],
+    "Lasso MSE": [
+        mse_lasso.mean(),
+        mse_table_with_best.loc["CRuns only", "LASSO"],
+        mse_table_with_best.loc["Top 5 Numeric", "LASSO"],
+        mse_table_with_best.loc[
+            "Top 5 Numeric + Division_W Interactions", "LASSO"
+        ]
+    ],
+    "Elastic Net MSE": [
+        mse_elastic.mean(),
+        mse_table_with_best.loc["CRuns only", "Elastic Net"],
+        mse_table_with_best.loc["Top 5 Numeric", "Elastic Net"],
+        mse_table_with_best.loc[
+            "Top 5 Numeric + Division_W Interactions", "Elastic Net"
+        ]
+    ]
+}).round(2)
+
+print("All Models - MSE Comparison (Part I vs II)")
+mse_compare_all
+
+```
+
+In my case, the  Elastic Net model generally achieved the lowest or close to the lowest MSE across all of the different feature sets, though it did not “win” in every case, as in some cases Ridge regression was very slightly better. In the full model(all predictors) and the interaction model, Elastic Net slightly outperformed both Ridge and Lasso (MSE = 118,750.19 and 120,918.09). In the smaller feature sets, CRuns only(most important numeric variable) and  Top 5 numeric, Ridge was marginally better(MSE = 143,658.52 and 120,858.26).
+
+This pattern makes sense. Ridge only has a L2 penalty, and Lasso only has a L1 penalty. Elastic Net combines both, which gives it flexibility to handle correlated predictors by BOTH shrinking and selecting features, rather than just one of the two handling methods. When many correlated variables were present, like in the full and interaction models, the mixed penalty from Elastic Net provides a slight edge over other methods. When less predictors are used, the L1 component adds unnecessary penalty, which allows Ridge to perform just as well as was seen.
+
+Overall, Elastic Net’s performance confirms its advantage in "winning" as mix between Ridge and Lasso, by providing the best predictive accuracy across all feature sets even if losing to others very marginally.
+
+
+**Part IV. Final Model**
+
+**Fit your final best pipeline on the full dataset, and summarize your results in a few short sentences and a plot.**
+
+Although technically, the best model was the Ridge Model from the Top 5 Numeric Variable model, it was only better than the Elastic Net model marginally. Based on my answer to Part C of Part III, it is evident that Elastic Net models are stronger with models using more predictors/features, so becasue the difference between the two models is so small, I am going to choose to use the Elastic Net model to get better handling for the data using both L1 and L2 penalization.
+
+Chosen Model : Top 5 Numeric Variable Model | Elastic Net Method | alpha(λ) = 0.01 | l1_ratio(α) = 0.4
+
+**Fit your final best pipeline on the full dataset**
+```{python}
+
+#Refitting Elastic Net (Top 5 numerics model)
+best5 = ["CRuns", "AtBat", "Hits", "CAtBat", "CWalks"]
+final_elastic = elasticgrid.best_estimator_
+final_elastic.fit(X[best5], y)
+
+#coefficients of model
+featurenames = final_elastic.named_steps["preprocessing"].get_feature_names_out()
+new_elastic_coefs = final_elastic.named_steps["elastic_regression"].coef_
+
+new_coef_df = pd.DataFrame({"Feature": featurenames, "Coefficient": new_elastic_coefs})
+
+print("Top 5 +/- coefficients (largest positive/or negative effects on Salary):")
+print(new_coef_df.sort_values(by="Coefficient", key=lambda s: np.abs(s), ascending=False).head(5))
+
+y_pred = final_elastic.predict(X[best5])
+
+r2 = r2_score(y, y_pred)
+mse = mean_squared_error(y, y_pred)
+
+print("\nModel Performance on Full Dataset (Elastic Net - Top 5 Numerics):")
+print(f"R Squared Score: {r2:.4f}")
+print(f"Mean Squared Error (MSE): {mse:,.2f}")
+
+```
+
+
+**Summarize your results in a few short sentences and a plot.**
+```{python}
+
+plot_df = pd.DataFrame({
+    'Actual': y,
+    'Predicted': y_pred,
+})
+
+(ggplot(plot_df, aes(x='Actual', y='Predicted'))
+ + geom_point(alpha=0.6)
+ + geom_abline(intercept=0, slope=1, linetype='dashed')
+ + labs(title=f'Predicted vs Actual Salary (Final Elastic Net - Top 5)\nR Squared={r2:.3f}, MSE={mse:,.0f}',
+        x='Actual Salary (thousands $)', y='Predicted Salary (thousands $)')
+)
+
+```
+
+The final Elastic Net model using the Top 5 numeric predictors: CRuns, AtBat, Hits, CAtBat, and CWalks, explains about 41.6% of the variation in player salaries (R Squared = 0.416 ) with an overall Mean Squared Error of 118,393.87. 
+
+Among the most important standardized coefficients, Hits(Number of hits in 1986, 173.5) and Career Runs(Number of runs during his career, 156.5) have the strongest positive effects on predicted salary, while At Bats(Number of times at bat in 1986, –33.3) exerts the largest negative influence. 
+
+The residuals versus fitted scatter plot shows a fairly random cloud of data points around zero, indicating that the model’s errors are somewhat unbiased with no clear pattern: However, there is some spread at very high salary levels, suggesting a few players whose salaries are extreme and difficult to predict as closely.
+
+Overall, I feel that the final Elastic Net model provides a good balance between accuracy and interpretability. Furthermore, it captures the main relationships between offensive performance of a player and salary while controlling for multicollinearity among the hitting statistics. This is evident as the R Squared is the highest of any model in the Lab, and the MSE is also lower than that of any other combination of model and feature set that I tested.
+
+
+
+```{python}
+
+elastic_rows = [
+    ("Part I - All Predictors", float(mse_elastic.mean())),
+    ("Part II - CRuns only",    mse_elastic_numeric),
+    ("Part II - Top 5 Numeric", mse_elastic_top5),
+    ("Part II - Top 5 + Div_W Interaction", mse_elastic_interaction),
+    ("Part IV - Final Model (Top 5 Refit Full Model)", mse)  
+]
+
+elastic_df = pd.DataFrame(elastic_rows, columns=["Feature Set", "MSE"]).round(2)
+
+(ggplot(elastic_df, aes(x="Feature Set", y="MSE", fill="Feature Set"))
+ + geom_col(show_legend=False)
+ + labs(title="Elastic Net MSE Comparison Across All Feature Sets",
+        x="Feature Set / Model Version",
+        y="Mean Squared Error (MSE)")
++ coord_cartesian(ylim=(110000,150000)) #zooms in on these values of y
+ + theme(axis_text_x=element_text(rotation=30, ha="right")))
+
+```
+
+Extra Bar Chart: Showing the lowest MSE is achieved in final model(just barely)
+This also supports that Elastic Net works best in models with more predictors/features.
