@@ -46,15 +46,16 @@ print("Checking for NA values")
 na = ha.isna().sum()
 print(na)
 
-#summary stats
-ha.describe()
+#summaries/descriptions
+print("Description/Summary Stats of Data")
+print(ha.describe())
 
 #seeing different in outputs for male versus female
 malecount = ha[ha["sex"] == 1]["output"].value_counts()
 femalecount = ha[ha["sex"] == 0]["output"].value_counts()
-print("Output Counts for Male Patients")
+print("Output(Target Variable) Distribution for Male Patients")
 print(malecount)
-print("Output Counts for Female Patients")
+print("Output(Target Variable) Distribution for Female Patients")
 print(femalecount)
 
 X = ha.drop('output', axis=1)

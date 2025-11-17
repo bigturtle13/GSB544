@@ -2243,7 +2243,7 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 <p><a href="https://github.com/bigturtle13/GSB544/tree/main/Week8">Link to my Github Repository</a></p>
 <section id="import-packages" class="level1">
 <h1>Import Packages</h1>
-<div id="fc6fd4af" class="cell" data-execution_count="1">
+<div id="24e1dd6b" class="cell" data-execution_count="1">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> pandas <span class="im">as</span> pd</span>
@@ -2266,7 +2266,7 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 </section>
 <section id="part-0.-data-cleaning" class="level1">
 <h1>Part 0. Data Cleaning</h1>
-<div id="809de008" class="cell" data-execution_count="2">
+<div id="567c5979" class="cell" data-execution_count="2">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>ha <span class="op">=</span> pd.read_csv(<span class="st">&quot;https://www.dropbox.com/s/aohbr6yb9ifmc8w/heart_attack.csv?dl=1&quot;</span>)</span>
@@ -2277,32 +2277,33 @@ var requirejs,require,define;(function(global,setTimeout){var req,s,head,baseEle
 <span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>na <span class="op">=</span> ha.isna().<span class="bu">sum</span>()</span>
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(na)</span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">#summary stats</span></span>
-<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>ha.describe()</span>
-<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a><span class="co">#seeing different in outputs for male versus female</span></span>
-<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a>malecount <span class="op">=</span> ha[ha[<span class="st">&quot;sex&quot;</span>] <span class="op">==</span> <span class="dv">1</span>][<span class="st">&quot;output&quot;</span>].value_counts()</span>
-<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>femalecount <span class="op">=</span> ha[ha[<span class="st">&quot;sex&quot;</span>] <span class="op">==</span> <span class="dv">0</span>][<span class="st">&quot;output&quot;</span>].value_counts()</span>
-<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Output Counts for Male Patients&quot;</span>)</span>
-<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(malecount)</span>
-<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Output Counts for Female Patients&quot;</span>)</span>
-<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(femalecount)</span>
-<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> ha.drop(<span class="st">&#39;output&#39;</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
-<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> ha[<span class="st">&#39;output&#39;</span>]</span>
-<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>numerical_features <span class="op">=</span> [<span class="st">&#39;age&#39;</span>, <span class="st">&#39;trtbps&#39;</span>, <span class="st">&#39;chol&#39;</span>, <span class="st">&#39;thalach&#39;</span>] <span class="co">#define all numerical features</span></span>
-<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>categorical_features <span class="op">=</span> [<span class="st">&#39;sex&#39;</span>, <span class="st">&#39;cp&#39;</span>, <span class="st">&#39;restecg&#39;</span>] <span class="co">#define all categorical features</span></span>
-<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a><span class="co">#need to define categorical manually since right now theyre just integers</span></span>
-<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">#by doing so I can explicitly tell preprocessor which are which using StandardScaler() and OneHotEncoder()</span></span>
-<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a>preprocessor <span class="op">=</span> ColumnTransformer(</span>
-<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>    transformers<span class="op">=</span>[</span>
-<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&#39;numerical&#39;</span>, StandardScaler(), numerical_features),</span>
-<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&#39;categorical&#39;</span>, OneHotEncoder(drop <span class="op">=</span> <span class="st">&#39;first&#39;</span>, handle_unknown<span class="op">=</span><span class="st">&#39;ignore&#39;</span>, sparse_output<span class="op">=</span><span class="va">False</span>), categorical_features)</span>
-<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>    ],</span>
-<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    remainder<span class="op">=</span><span class="st">&#39;drop&#39;</span></span>
-<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="co">#summaries/descriptions</span></span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Description/Summary Stats of Data&quot;</span>)</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(ha.describe())</span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="co">#seeing different in outputs for male versus female</span></span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a>malecount <span class="op">=</span> ha[ha[<span class="st">&quot;sex&quot;</span>] <span class="op">==</span> <span class="dv">1</span>][<span class="st">&quot;output&quot;</span>].value_counts()</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>femalecount <span class="op">=</span> ha[ha[<span class="st">&quot;sex&quot;</span>] <span class="op">==</span> <span class="dv">0</span>][<span class="st">&quot;output&quot;</span>].value_counts()</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Output(Target Variable) Distribution for Male Patients&quot;</span>)</span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(malecount)</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="st">&quot;Output(Target Variable) Distribution for Female Patients&quot;</span>)</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(femalecount)</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>X <span class="op">=</span> ha.drop(<span class="st">&#39;output&#39;</span>, axis<span class="op">=</span><span class="dv">1</span>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>y <span class="op">=</span> ha[<span class="st">&#39;output&#39;</span>]</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>numerical_features <span class="op">=</span> [<span class="st">&#39;age&#39;</span>, <span class="st">&#39;trtbps&#39;</span>, <span class="st">&#39;chol&#39;</span>, <span class="st">&#39;thalach&#39;</span>] <span class="co">#define all numerical features</span></span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>categorical_features <span class="op">=</span> [<span class="st">&#39;sex&#39;</span>, <span class="st">&#39;cp&#39;</span>, <span class="st">&#39;restecg&#39;</span>] <span class="co">#define all categorical features</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a><span class="co">#need to define categorical manually since right now theyre just integers</span></span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a><span class="co">#by doing so I can explicitly tell preprocessor which are which using StandardScaler() and OneHotEncoder()</span></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a>preprocessor <span class="op">=</span> ColumnTransformer(</span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>    transformers<span class="op">=</span>[</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&#39;numerical&#39;</span>, StandardScaler(), numerical_features),</span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>        (<span class="st">&#39;categorical&#39;</span>, OneHotEncoder(drop <span class="op">=</span> <span class="st">&#39;first&#39;</span>, handle_unknown<span class="op">=</span><span class="st">&#39;ignore&#39;</span>, sparse_output<span class="op">=</span><span class="va">False</span>), categorical_features)</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>    ],</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>    remainder<span class="op">=</span><span class="st">&#39;drop&#39;</span></span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </details>
 <div class="cell-output cell-output-stdout">
 <pre><code>Checking for NA values
@@ -2315,12 +2316,32 @@ restecg    0
 thalach    0
 output     0
 dtype: int64
-Output Counts for Male Patients
+Description/Summary Stats of Data
+              age         sex          cp      trtbps        chol     restecg  \
+count  273.000000  273.000000  273.000000  273.000000  273.000000  273.000000   
+mean    54.347985    0.673993    0.974359  132.098901  246.860806    0.538462   
+std      9.163134    0.469611    1.030456   17.700358   52.569726    0.528059   
+min     29.000000    0.000000    0.000000   94.000000  126.000000    0.000000   
+25%     47.000000    0.000000    0.000000  120.000000  211.000000    0.000000   
+50%     56.000000    1.000000    1.000000  130.000000  240.000000    1.000000   
+75%     61.000000    1.000000    2.000000  140.000000  275.000000    1.000000   
+max     77.000000    1.000000    3.000000  200.000000  564.000000    2.000000   
+
+          thalach      output  
+count  273.000000  273.000000  
+mean   149.446886    0.534799  
+std     23.240707    0.499704  
+min     71.000000    0.000000  
+25%    133.000000    0.000000  
+50%    152.000000    1.000000  
+75%    166.000000    1.000000  
+max    202.000000    1.000000  
+Output(Target Variable) Distribution for Male Patients
 output
 0    105
 1     79
 Name: count, dtype: int64
-Output Counts for Female Patients
+Output(Target Variable) Distribution for Female Patients
 output
 1    67
 0    22
@@ -2331,7 +2352,7 @@ Name: count, dtype: int64</code></pre>
 <section id="part-one-fitting-models" class="level1">
 <h1>Part One: Fitting Models</h1>
 <p><strong>Q1: kNN Model</strong></p>
-<div id="9bec4b18" class="cell" data-execution_count="3">
+<div id="3332ce06" class="cell" data-execution_count="3">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>pipe_knn <span class="op">=</span> Pipeline(steps<span class="op">=</span>[</span>
@@ -2434,7 +2455,7 @@ kNN Accuracy Score
 <p>Since kNN is a nonparametric model, it does not estimate coefficients/weights for individual predictors. Instead, it classifies new observations based on their distance to stored training points in feature space. The StandardScaler ensures that all numeric features contribute comparably to distance calculations, while OneHot encoding allows categorical variables to influence relationships appropriately.</p>
 <p>The confusion matrix showed an overall accuracy of 0.71, correctly identifying 101 at risk and 92 not at risk patients, while misclassifying 35 and 45 cases respectively. This indicates that the kNN approach can reasonably predict heart-attack risk when both numeric and categorical features are properly scaled and encoded, providing a balanced trade off between sensitivity (recall = 0.69) and precision = 0.74.</p>
 <p><strong>Q2: Logistic Regression</strong></p>
-<div id="a49ca660" class="cell" data-execution_count="4">
+<div id="88483012" class="cell" data-execution_count="4">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>pipe_lr <span class="op">=</span> Pipeline(steps<span class="op">=</span>[</span>
@@ -2568,7 +2589,7 @@ Logistic Regression Accuracy Score
 <p>When sorted by absolute coefficient magnitude, the most influential predictors were sex, chest pain type (cp), and maximum heart rate achieved (thalach). Specifically, the coefficient for sex_1 (male) was –1.80, indicating that being male decreases the predicted risk of a heart attack relative to the baseline category (female). In contrast, chest pain types cp_1, cp_2, and cp_3 had strong positive coefficients (1.64, 1.61, 1.24, respectively), suggesting that these forms of chest pain are associated with higher predicted risk compared to the baseline chest pain type(cp_0,asymptomatic). The coefficient for thalach (0.77) shows that a higher maximum heart rate increases the likelihood of being classified as at risk.</p>
 <p>The confusion matrix showed an overall accuracy of about 0.78, correctly identifying 118 at risk and 94 not at risk patients, while misclassifying 33 and 28 cases respectively. The model achieved a strong balance between sensitivity (recall = 0.81) and precision (0.78), suggesting that Logistic Regression performs slightly better than the kNN model in distinguishing between at-risk and not-at-risk patients. The regularization parameter (C = 1) provided moderate penalty strength, helping prevent overfitting while maintaining high predictive performance.</p>
 <p><strong>Q3: Decision Tree</strong></p>
-<div id="0bb9a462" class="cell" data-execution_count="5">
+<div id="f0f37955" class="cell" data-execution_count="5">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>pipe_dt <span class="op">=</span> Pipeline(steps<span class="op">=</span>[</span>
@@ -2702,7 +2723,7 @@ Decision Tree Accuracy Score
 <p>All in all, the results across my three models indicate that the most important predictors of heart attack risk across all models are maximum heart rate achieved (thalach) and age.</p>
 <p><strong>Q5: ROC Curve</strong></p>
 <p><em>Plot the ROC Curve for your three models above.</em></p>
-<div id="5804d571" class="cell" data-execution_count="6">
+<div id="55baa065" class="cell" data-execution_count="6">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co">#out-of-fold predicted probabilities</span></span>
@@ -2750,7 +2771,7 @@ Decision Tree Accuracy Score
 <section id="part-two-metrics" class="level1">
 <h1>Part Two: Metrics</h1>
 <p><strong>True Positive Rate or Recall or Sensitivity:</strong> <em>Of the observations that are truly Class A, how many were predicted to be Class A?</em></p>
-<div id="d48f313c" class="cell" data-execution_count="7">
+<div id="22f841de" class="cell" data-execution_count="7">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 5 fold OOF class predictions for each model</span></span>
@@ -2784,7 +2805,7 @@ Decision Tree Accuracy Score
 <li>For the Decision Tree model, the model correctly identified about 73% of patients who were truly at risk of a heart attack.</li>
 </ul>
 <p><strong>Precision or Positive Predictive Value:</strong> <em>Of all the observations classified as Class A, how many of them were truly from Class A?</em></p>
-<div id="9140d28f" class="cell" data-execution_count="8">
+<div id="f0f2f312" class="cell" data-execution_count="8">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Precision/Positive Predictive Value for the positive class(A/1 = at risk patients)</span></span>
@@ -2812,7 +2833,7 @@ Decision Tree Accuracy Score
 <li>For the Decision Tree model, of all patients predicted to be at risk, about 72% were actually at risk.</li>
 </ul>
 <p><strong>True Negative Rate or Specificity or Negative Predictive Value:</strong> <em>Of all the observations classified as NOT Class A, how many were truly NOT Class A?</em></p>
-<div id="caf862ee" class="cell" data-execution_count="9">
+<div id="5a44baa7" class="cell" data-execution_count="9">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb18"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Specificity/true negative rate for the negative class(B/0 = not at risk patients)</span></span>
@@ -2878,7 +2899,7 @@ Decision Tree Accuracy Score
 <section id="part-four-validation" class="level1">
 <h1>Part Four: Validation</h1>
 <p><em>Random 10% of the observations to serve as a final validation set.</em></p>
-<div id="de72522e" class="cell" data-execution_count="10">
+<div id="0c9ecce6" class="cell" data-execution_count="10">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb20"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>ha_validation <span class="op">=</span> pd.read_csv(<span class="st">&quot;https://www.dropbox.com/s/jkwqdiyx6o6oad0/heart_attack_validation.csv?dl=1&quot;</span>)</span>
@@ -2889,7 +2910,7 @@ Decision Tree Accuracy Score
 </div>
 <p><strong>Use each of your final models in Part One Q1-3, predict the target variable in the validation dataset. For each, output a confusion matrix, and report the ROC AUC, the precision, and the recall.</strong></p>
 <p><em>kNN</em></p>
-<div id="d84b54f5" class="cell" data-execution_count="11">
+<div id="1222bb9f" class="cell" data-execution_count="11">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="co">#predictions based on best fitted kNN model</span></span>
@@ -2935,7 +2956,7 @@ Validation Recall: 0.632</code></pre>
 </div>
 </div>
 <p><em>Logistic Regression</em></p>
-<div id="4ce8917d" class="cell" data-execution_count="12">
+<div id="411b8ec9" class="cell" data-execution_count="12">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb24"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a><span class="co">#predictions based on best fitted Logistic Regression model</span></span>
@@ -2981,7 +3002,7 @@ Validation Recall: 0.789</code></pre>
 </div>
 </div>
 <p><em>Decision Tree</em></p>
-<div id="1e59d178" class="cell" data-execution_count="13">
+<div id="2f4df435" class="cell" data-execution_count="13">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb27"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="co">#predictions based on best fitted Decision Tree model</span></span>
@@ -3028,7 +3049,7 @@ Validation Recall: 0.632</code></pre>
 </div>
 <p><strong>Compare these values to the cross-validated estimates you reported in Part One and Part Two.</strong></p>
 <p><em>Manual Calculations of Precison and Recall for Part 1 Models</em></p>
-<div id="3a760b4a" class="cell" data-execution_count="14">
+<div id="306533dd" class="cell" data-execution_count="14">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb30"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>report_knn <span class="op">=</span> classification_report(y, knn_ypred, output_dict<span class="op">=</span><span class="va">True</span>)</span>
@@ -3045,7 +3066,7 @@ Validation Recall: 0.632</code></pre>
 </details>
 </div>
 <p><em>Table of Model Success Comparison Between Part 1 &amp; Part 4</em></p>
-<div id="e3e9ecdc" class="cell" data-execution_count="15">
+<div id="d15cf48d" class="cell" data-execution_count="15">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb31"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb31-1"><a href="#cb31-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Cross validated results(part I)</span></span>
@@ -3132,7 +3153,7 @@ Validation Recall: 0.632</code></pre>
 </div>
 <p><strong>Did our measure of model success turn out to be approximately correct for the validation data?</strong></p>
 <p><em>Differences between metrics to see how correct the measures of model success were</em></p>
-<div id="5a097178" class="cell" data-execution_count="16">
+<div id="58c3f2c3" class="cell" data-execution_count="16">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb32"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>comparison_diff <span class="op">=</span> comparison_df.copy()</span>
@@ -3218,7 +3239,7 @@ Validation Recall: 0.632</code></pre>
 </ul></li>
 </ul>
 <p><strong>Cross Validated Cohen Kappa Scores(Part I Models, Q1-Q3)</strong></p>
-<div id="ca103958" class="cell" data-execution_count="17">
+<div id="6a400919" class="cell" data-execution_count="17">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb33"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb33-1"><a href="#cb33-1" aria-hidden="true" tabindex="-1"></a>kappa_knn_cv <span class="op">=</span> cohen_kappa_score(y, knn_ypred)</span>
@@ -3271,7 +3292,7 @@ Validation Recall: 0.632</code></pre>
 </div>
 </div>
 <p><strong>Validation Set Cohen Kappa Scores(Part IV Models)</strong></p>
-<div id="7f7c60ae" class="cell" data-execution_count="18">
+<div id="41c1e7ee" class="cell" data-execution_count="18">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb35"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb35-1"><a href="#cb35-1" aria-hidden="true" tabindex="-1"></a>kappa_knn_val <span class="op">=</span> cohen_kappa_score(y_val, knn_y_val_pred)</span>
@@ -3333,7 +3354,7 @@ Validation Recall: 0.632</code></pre>
 </ul></li>
 </ul>
 <p><strong>Cross Validation Measure of Success Rankings</strong></p>
-<div id="16be6914" class="cell" data-execution_count="19">
+<div id="a76a0b44" class="cell" data-execution_count="19">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb37"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb37-1"><a href="#cb37-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Rank models by Cohen&#39;s Kappa</span></span>
@@ -3376,7 +3397,7 @@ Logistic Regression          0.78
 </div>
 </div>
 <p><strong>Validated Data Measure of Success Rankings</strong></p>
-<div id="96511a6e" class="cell" data-execution_count="20">
+<div id="edef2a52" class="cell" data-execution_count="20">
 <details class="code-fold">
 <summary>Code</summary>
 <div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb39"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb39-1"><a href="#cb39-1" aria-hidden="true" tabindex="-1"></a><span class="co">#Rank models by Cohen&#39;s Kappa</span></span>
