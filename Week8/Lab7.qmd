@@ -1,0 +1,788 @@
+---
+title: "Lab 7"
+format:
+  html:
+    theme : cosmo
+    code-fold: true
+    embed-resources: true
+jupyter: gsb544
+execute:
+    echo: true
+---
+
+[Link to my Github Repository](https://github.com/bigturtle13/GSB544/tree/main/Week8)
+
+# Import Packages
+
+```{python}
+
+import pandas as pd
+import numpy as np
+from plotnine import *
+from sklearn.pipeline import Pipeline
+from sklearn.compose import make_column_selector, ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, PolynomialFeatures
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet, LogisticRegression
+from sklearn.model_selection import cross_val_score, GridSearchCV, cross_val_predict
+import matplotlib.pyplot as plt
+from sklearn.metrics import *
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+from sklearn.tree import DecisionTreeRegressor, plot_tree, DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
+```
+
+# Part 0. Data Cleaning
+
+```{python}
+
+ha = pd.read_csv("https://www.dropbox.com/s/aohbr6yb9ifmc8w/heart_attack.csv?dl=1")
+
+#showing theres no NA values
+#ha.info()
+print("Checking for NA values")
+na = ha.isna().sum()
+print(na)
+
+#summary stats
+ha.describe()
+
+#seeing different in outputs for male versus female
+malecount = ha[ha["sex"] == 1]["output"].value_counts()
+femalecount = ha[ha["sex"] == 0]["output"].value_counts()
+print("Output Counts for Male Patients")
+print(malecount)
+print("Output Counts for Female Patients")
+print(femalecount)
+
+X = ha.drop('output', axis=1)
+y = ha['output']
+
+numerical_features = ['age', 'trtbps', 'chol', 'thalach'] #define all numerical features
+categorical_features = ['sex', 'cp', 'restecg'] #define all categorical features
+#need to define categorical manually since right now theyre just integers
+#by doing so I can explicitly tell preprocessor which are which using StandardScaler() and OneHotEncoder()
+
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('numerical', StandardScaler(), numerical_features),
+        ('categorical', OneHotEncoder(drop = 'first', handle_unknown='ignore', sparse_output=False), categorical_features)
+    ],
+    remainder='drop'
+)
+
+
+```
+
+# Part One: Fitting Models
+
+**Q1: kNN Model**
+```{python}
+pipe_knn = Pipeline(steps=[
+    ('prep', preprocessor),
+    ('knn', KNeighborsClassifier())
+])
+
+knn_param_grid = {
+    'knn__n_neighbors': [3, 5, 7, 9, 11, 13, 15]
+}
+
+knn = GridSearchCV(estimator=pipe_knn, param_grid=knn_param_grid, scoring='roc_auc',
+    n_jobs=-1, #makes run faster, uses all cores on computer
+    cv=5, #realistically could just leave this as None, or not include, cv = 5 is the default from what I read
+    refit=True, #after testing all models defined in paramgrid, fits to the best one
+    return_train_score=False #only keeps validation scores, doesnt keep others
+)
+
+knn.fit(X,y)
+
+#Mean Cross Validated ROC AUC for best model, Best Parameters and Model
+knn_cv_mean_auc = knn.best_score_; print(f"Cross validated ROC AUC(mean): {knn_cv_mean_auc:.3f}")
+knn_cv_best_param = knn.best_params_ ; print("Best Parameters:",knn_cv_best_param)
+knn_cv_best_est = knn.best_estimator_ ; print("Best Model:",knn_cv_best_est)
+
+
+#cross validated predictions(out of fold)
+knn_ypred = cross_val_predict(knn.best_estimator_, X, y, cv=5)
+
+
+cm = confusion_matrix(y, knn_ypred)
+
+print("Confusion Matrix (kNN):")
+print(cm)
+knn_cm = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                         display_labels=['No Risk', 'At Risk'])
+knn_cm.plot()
+plt.title('KNN - Confusion Matrix')
+plt.show()
+
+TN, FP, FN, TP = cm.ravel()
+print(f"True Negatives(TN): {TN}")
+print(f"False Positives(FP): {FP}")
+print(f"False Negatives(FN): {FN}")
+print(f"True Positives(TP): {TP}")
+
+#classification report(recall and sensitivity are the same thing)
+print("kNN Classification Report")
+print(classification_report(y, knn_ypred))
+
+#accuracy score
+print("kNN Accuracy Score")
+print(accuracy_score(y, knn_ypred))
+
+```
+
+I used GridSearchCV to test many different kNN model configurations(3,5,7,9,11,13,15) using 5-fold cross validation and ROC AUC as my evaluation metric. I determined that the best kNN model used k = 7 neighbors, and it achieved a mean cross validated ROC AUC of = 0.788. 
+
+There are no coefficients to interpret because kNN models do not learn an equation, but instead they store training data, and they classify new prediction points using proximity/distance to points in the training data; However, the scaling and encoding parts of the preprocessor for the pipeline ensures that all predictors meaningfully contribute to distance based classification. 
+
+Since kNN is a nonparametric model, it does not estimate coefficients/weights for individual predictors. Instead, it classifies new observations based on their distance to stored training points in feature space.  The StandardScaler ensures that all numeric features contribute comparably to distance calculations, while OneHot encoding allows categorical variables to influence relationships appropriately.
+
+The confusion matrix showed an overall accuracy of 0.71, correctly identifying 101 at risk and 92 not at risk patients, while misclassifying 35 and 45 cases respectively. This indicates that the kNN approach can reasonably predict heart-attack risk when both numeric and categorical features are properly scaled and encoded, providing a balanced trade off between sensitivity (recall = 0.69) and precision = 0.74.
+
+
+**Q2: Logistic Regression**
+```{python}
+
+pipe_lr = Pipeline(steps=[
+    ('prep', preprocessor),
+    ('poly', PolynomialFeatures(include_bias=False)), #degree doesn't really matter if I take out since I set lr_param_grid itll test for everything i set
+    ('logreg', LogisticRegression(max_iter=1000, random_state = 42))] #max_iter prevents convergence errors
+)
+
+lr_param_grid = {
+    'poly__degree': [1, 2, 3, 4, 5],
+    'logreg__C': [0.001, 0.01, 0.1, 1, 10, 100]
+}
+
+lr = GridSearchCV(estimator=pipe_lr, param_grid=lr_param_grid, scoring='roc_auc',
+    n_jobs=-1, #makes run faster, uses all cores on computer
+    cv=5, #realistically could just leave this as None, or not include, cv = 5 is the default from what I read
+    refit=True, #after testing all models defined in paramgrid, fits to the best one
+    return_train_score=False #only keeps validation scores, doesnt keep others
+)
+
+lr.fit(X,y)
+
+#Mean Cross Validated ROC AUC for best model, Best Parameters and Model
+lr_cv_mean_auc = lr.best_score_; print(f"Cross validated ROC AUC(mean): {lr_cv_mean_auc:.3f}")
+lr_cv_best_param = lr.best_params_ ; print("Best Parameters:",lr_cv_best_param)
+lr_cv_best_est = lr.best_estimator_ ; print("Best Model:",lr_cv_best_est)
+
+
+#cross validated predictions(out of fold)
+lr_ypred = cross_val_predict(lr.best_estimator_, X, y, cv=5)
+
+
+cm = confusion_matrix(y, lr_ypred)
+
+print("Confusion Matrix (Logistic Regression):")
+print(cm)
+lr_cm = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                         display_labels=['No Risk', 'At Risk'])
+lr_cm.plot()
+plt.title('KNN - Logistic Regression')
+plt.show()
+
+
+TN, FP, FN, TP = cm.ravel()
+print(f"True Negatives(TN): {TN}")
+print(f"False Positives(FP): {FP}")
+print(f"False Negatives(FN): {FN}")
+print(f"True Positives(TP): {TP}")
+
+#classification report(recall and sensitivity are the same thing)
+print("Logistic Regression Classification Report")
+print(classification_report(y, lr_ypred))
+
+#accuracy score
+print("Logistic Regression Accuracy Score")
+print(accuracy_score(y, lr_ypred))
+
+#preprocessed feature names
+feature_names = lr.best_estimator_.named_steps['prep'].get_feature_names_out()
+
+#coefficients from the logistic regression model
+coefs = lr.best_estimator_.named_steps['logreg'].coef_.flatten()#.flatten() makes it 1D
+
+#dataframe
+coef_df = pd.DataFrame({'Feature': feature_names, 'Coefficient': coefs})
+
+#DataFrame of everything sorted by magnitude of coefficient
+coef_df['Abs_Coefficient'] = coef_df['Coefficient'].abs()
+coef_df = coef_df.sort_values(by='Abs_Coefficient', ascending=False)
+print(coef_df[['Feature', 'Coefficient']]) #only prints the feature name and coefficient value, sorted by abs coefficient
+
+```
+
+I used GridSearchCV to test several Logistic Regression configurations by varying both the regularization strength (C = [0.001, 0.01, 0.1, 1, 10, 100]) and the polynomial feature degree (1–5) using 5 fold cross-validation and ROC AUC as the evaluation metric. The best model used C(Regularization Strength) = 1 and polynomial degree = 1, achieving a mean cross validated ROC AUC of 0.864.
+
+Logistic Regression is a parametric model that does learn an explicit equation in order to estimate coefficients/weights for each of the predictors. These coefficients represent how strongly and in what direction each feature influences the likelihood of being at risk for a heart attack. The scaling and OneHotEncoder steps in the preprocessing pipeline ensure that the coefficients are on comparable scales, allowing each predictor to contribute meaningfully to the model. When sorted by absolute value/magnitude, the strongest predictors were sex, maximum heart rate (thalach), and chest pain type (cp). 
+
+Logistic Regression is a parametric model that estimates an explicit equation relating predictors to the probability of being at risk for a heart attack. Each coefficient/weight represents how strongly and in what direction a feature influences this likelihood, relative to a reference category. The preprocessing steps StandardScaler and OneHotEncoder(drop='first') ensure that numeric and categorical features are on comparable scales and that categorical variables are represented with defined baseline/reference categories for interpretation.
+
+When sorted by absolute coefficient magnitude, the most influential predictors were sex, chest pain type (cp), and maximum heart rate achieved (thalach). Specifically, the coefficient for sex_1 (male) was –1.80, indicating that being male decreases the predicted risk of a heart attack relative to the baseline category (female). In contrast, chest pain types cp_1, cp_2, and cp_3 had strong positive coefficients (1.64, 1.61, 1.24, respectively), suggesting that these forms of chest pain are associated with higher predicted risk compared to the baseline chest pain type(cp_0,asymptomatic). The coefficient for thalach (0.77) shows that a higher maximum heart rate increases the likelihood of being classified as at risk.
+
+The confusion matrix showed an overall accuracy of about 0.78, correctly identifying 118 at risk and 94 not at risk patients, while misclassifying 33 and 28 cases respectively. The model achieved a strong balance between sensitivity (recall = 0.81) and precision (0.78), suggesting that Logistic Regression performs slightly better than the kNN model in distinguishing between at-risk and not-at-risk patients. The regularization parameter (C = 1) provided moderate penalty strength, helping prevent overfitting while maintaining high predictive performance.
+
+**Q3: Decision Tree**
+```{python}
+
+pipe_dt = Pipeline(steps=[
+    ('prep', preprocessor),
+    ('tree', DecisionTreeClassifier(random_state = 42))] 
+)
+
+dt_param_grid = {
+    'tree__max_depth': [2, 3, 4, 5]
+}
+
+dt = GridSearchCV(estimator=pipe_dt, param_grid=dt_param_grid, scoring='roc_auc',
+    n_jobs=-1, #makes run faster, uses all cores on computer
+    cv=5, #realistically could just leave this as None, or not include, cv = 5 is the default from what I read
+    refit=True, #after testing all models defined in paramgrid, fits to the best one
+    return_train_score=False #only keeps validation scores, doesnt keep others
+)
+
+dt.fit(X,y)
+
+#Mean Cross Validated ROC AUC for best model, Best Parameters and Model
+dt_cv_mean_auc = dt.best_score_; print(f"Cross validated ROC AUC(mean): {dt_cv_mean_auc:.3f}")
+dt_cv_best_param = dt.best_params_ ; print("Best Parameters:",dt_cv_best_param)
+dt_cv_best_est = dt.best_estimator_ ; print("Best Model:",dt_cv_best_est)
+
+
+#cross validated predictions(out of fold)
+dt_ypred = cross_val_predict(dt.best_estimator_, X, y, cv=5)
+
+
+cm = confusion_matrix(y, dt_ypred)
+
+print("Confusion Matrix (Decision Tree):")
+print(cm)
+dt_cm = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                         display_labels=['No Risk', 'At Risk'])
+dt_cm.plot()
+plt.title('KNN - Decision Tree')
+plt.show()
+
+
+TN, FP, FN, TP = cm.ravel()
+print(f"True Negatives(TN): {TN}")
+print(f"False Positives(FP): {FP}")
+print(f"False Negatives(FN): {FN}")
+print(f"True Positives(TP): {TP}")
+
+#classification report(recall and sensitivity are the same thing)
+print("Decision Tree Classification Report")
+print(classification_report(y, dt_ypred))
+
+#accuracy score
+print("Decision Tree Accuracy Score")
+print(accuracy_score(y, dt_ypred))
+
+#fitted Decision Tree model
+best_tree = dt.best_estimator_.named_steps['tree']
+
+#feature names from the preprocessor
+feature_names = dt.best_estimator_.named_steps['prep'].get_feature_names_out()
+
+#df of most important variables using feature_importances_
+importances = pd.DataFrame({
+    'Feature': feature_names,
+    'Importance': best_tree.feature_importances_
+}).sort_values(by='Importance', ascending=False)
+
+print(importances.head())
+
+```
+
+I used GridSearchCV to test several Decision Tree configurations by varying the maximum depth parameter (2, 3, 4, 5) using 5 fold cross-validation and ROC AUC as the evaluation metric. The best model used a maximum depth of 2, achieving a mean cross validated ROC AUC of 0.755.
+
+The Decision Tree model does not estimate coefficients like Logistic Regression. Instead, it identifies the most important splits (decision rules) that separate patients who are at risk from those who are not. Using drop='first' in the one-hot encoder removes redundant dummy columns, so each categorical variable is interpreted relative to a baseline category(I previously didn't use drop = 'first' and answers changed after I added it). 
+
+These key features can be identified through the importance dataframe I created, which clearly displays the most important variables as cp_0, age, and thalach. cp_0 was relied on most heavily by the model, as it accounted for about 76% of the model's decision making power. This implies that chest pain type was the most important distinguishing predictor for at risk versus not at risk patients by a lot; However, it is also evident that age and maximum heart rate achieved also had meaningful effects on the classification process, by accounting for about 13% and 11% of decision making power respectively.
+
+These key features can be identified through the importance dataframe I created, which clearly displays the most important variables as thalach, age, and sex_1(male). The feature importance results show that the most influential predictors were maximum heart rate achieved (thalach, 65%), age (19%), and male (sex_1, 17%). This suggests that higher heart rate, older age, and sex all play meaningful roles in classifying heart attack risk. These variables collectively accounted for nearly all of the model’s predictive decision power, with other predictors contributing extremely minimally.
+
+Therefore this model still provides clear predictions based on rules/splits rather than coefficients/weights. Despite having no actual values, it is still very useful for identifying the most influential predictors of heart attack risk within the dataset.
+
+The confusion matrix showed an accuracy of about 0.70, correctly identifying 107 at risk and 85 not at risk patients, while misclassifying 42 and 39 cases respectively. The model achieved a balanced performance between sensitivity (recall = 0.73) and precision (0.72), demonstrating that while its predictive performance was moderate, the Decision Tree remained interpretable. Compared to the other models, it performed below Logistic Regression (AUC = 0.864, accuracy = 0.78) but similarly to the kNN model (AUC = 0.788, accuracy = 0.71).
+
+
+**Q4: Interpretation**
+
+*Which predictors were most important to predicting heart attack risk?*
+
+Based on the results of my three models, the most important predictors of heart attack risk appear to be maximum heart rate achieved (thalach) and age.
+
+In the Logistic Regression model, both variables showed strong influence on the predicted probability of being at risk, and they were both in the top three variables in terms of magnitude of the coefficient. Maximum heart rate achieved had a positive coefficient, indicating that higher heart rate values are associated with a greater predicted likelihood of heart attack risk, while age had a negative coefficient, suggesting that younger patients were more likely to be classified as at risk(surprising to me). Similarly, in the Decision Tree model, these same predictors again ranked among the most influential, accounting for approximately 65% (thalach) and 18% (age) of the model’s total decision-making power.
+
+Other predictors that I considered but ultimately decided not to include among the most important were sex and resting blood pressure (trtbps). While sex contributed about 17% of the Decision Tree’s importance, it showed only moderate influence in the Logistic Regression model. In contrast, trtbps had a near zero importance in the Decision Tree and small coefficients in Logistic Regression, indicating limited predictive value. Since the influence of these predictors was either inconsistent (sex) or negligible (trtbps) across models, I did not include them among the strongest predictors of heart attack risk.
+
+Although the kNN model does not allow us to provide explicit feature importances, it bases it's predictions on measuring distances between patients in a multidimensional space of features. In this space, patients who are most similar in terms features are grouped together given similar risk classifications(output). Because distance is calculated from all scaled and encoded variables, features that vary more meaningfully between at risk and not at risk patients like maximum heart rate achieved and age have a greater influence on which patients are neighbors. This idea of how kNN groups patients and makes predictions reinforces the results from the other models, which identified variables that varied between the two groups as the strongest predictors of heart attack risk.
+
+All in all, the results across my three models indicate that the most important predictors of heart attack risk across all models are maximum heart rate achieved (thalach) and age.
+
+
+**Q5: ROC Curve**
+
+*Plot the ROC Curve for your three models above.*
+
+```{python}
+
+#out-of-fold predicted probabilities
+#cross_val_predict with method='predict_proba' performs 5-fold CV, giving predicted probabilities
+#[:, 1] selects probability of being "at risk" (output = 1)
+knn_oof = cross_val_predict(knn.best_estimator_, X, y, cv=5, method='predict_proba')[:, 1]
+lr_oof  = cross_val_predict(lr.best_estimator_,  X, y, cv=5, method='predict_proba')[:, 1]
+dt_oof  = cross_val_predict(dt.best_estimator_,  X, y, cv=5, method='predict_proba')[:, 1]
+
+#function to make into long format df with ROC coords for each model
+#creates a DataFrame of False Positive Rate (fpr) and True Positive Rate (tpr)
+#roc_curve() gives the fpr and tpr values for different classification thresholds
+def build_roc_df(y_true, y_score, auc):
+    fpr, tpr, _ = roc_curve(y_true, y_score)
+    return pd.DataFrame({'fpr': fpr, 'tpr': tpr, 'model': auc})
+
+#Build a single long DataFrame containing ROC curve coordinates for all three models
+#Each model is color coded, and the legend also includes its AUC value 
+df_roc = pd.concat([
+    build_roc_df(y, knn_oof, f'kNN (AUC = {roc_auc_score(y, knn_oof):.3f})'),
+    build_roc_df(y, lr_oof,  f'Logistic (AUC = {roc_auc_score(y, lr_oof):.3f})'),
+    build_roc_df(y, dt_oof,  f'Decision Tree (AUC = {roc_auc_score(y, dt_oof):.3f})')
+]) #could include ignore index + true to merge index values but i dont think it matters for plots, would look messy if i inspected the data though
+
+#plotnine roc curve
+(
+    ggplot(df_roc, aes(x='fpr', y='tpr', color='model'))
+    + geom_line(size=1.2) #roc lines
+    + geom_abline(slope=1, intercept=0, linetype='dashed') #refernce line
+    + coord_equal() #makes the axis equal to get the ROC curve shape desired, otherwise y axis looks taller than x
+    + labs(title='ROC Curves (Out-of-Fold [5 Fold] Predictions)',
+           x='False Positive Rate', y='True Positive Rate', color='Model')
+    + theme_minimal()
+)
+
+```
+
+# Part Two: Metrics
+
+**True Positive Rate or Recall or Sensitivity:** *Of the observations that are truly Class A, how many were predicted to be Class A?*
+```{python}
+
+# 5 fold OOF class predictions for each model
+knn_oof_pred = cross_val_predict(knn.best_estimator_, X, y, cv=5, method='predict')
+lr_oof_pred  = cross_val_predict(lr.best_estimator_,  X, y, cv=5, method='predict')
+dt_oof_pred  = cross_val_predict(dt.best_estimator_,  X, y, cv=5, method='predict')
+
+#Recall/Sensitivity for the positive class(A/1 = at risk patients)
+recall_knn = recall_score(y, knn_oof_pred, pos_label=1)
+recall_lr  = recall_score(y, lr_oof_pred,  pos_label=1)
+recall_dt  = recall_score(y, dt_oof_pred,  pos_label=1)
+
+#Summary table
+recall_df = pd.DataFrame({
+    'Model': ['kNN', 'Logistic Regression', 'Decision Tree'],
+    'Recall (Sensitivity)': [recall_knn, recall_lr, recall_dt]
+})
+
+print(recall_df.round(4))
+
+```
+
+- For the kNN model, the model correctly identified about 69% of patients who were truly at risk of a heart attack.
+- For the Logistic Regression model, the model correctly identified about 81% of patients who were truly at risk of a heart attack.
+- For the Decision Tree model, the model correctly identified about 73% of patients who were truly at risk of a heart attack.
+
+
+**Precision or Positive Predictive Value:** *Of all the observations classified as Class A, how many of them were truly from Class A?*
+```{python}
+
+#Precision/Positive Predictive Value for the positive class(A/1 = at risk patients)
+prec_knn = precision_score(y, knn_oof_pred, pos_label=1)
+prec_lr  = precision_score(y, lr_oof_pred,  pos_label=1)
+prec_dt  = precision_score(y, dt_oof_pred,  pos_label=1)
+
+precision_df = pd.DataFrame({
+    'Model': ['kNN', 'Logistic Regression', 'Decision Tree'],
+    'Precision (Positive Predictive Value)': [prec_knn, prec_lr, prec_dt]
+})
+
+print(precision_df.round(3))
+
+```
+
+- For the kNN model, of all patients predicted to be at risk, about 74% were actually at risk.
+- For the Logistic Regression model, of all patients predicted to be at risk, about 78% were actually at risk.
+- For the Decision Tree model, of all patients predicted to be at risk, about 72% were actually at risk.
+
+
+
+**True Negative Rate or Specificity or Negative Predictive Value:** *Of all the observations classified as NOT Class A, how many were truly NOT Class A?*
+
+```{python}
+
+#Specificity/true negative rate for the negative class(B/0 = not at risk patients)
+spec_knn = recall_score(y, knn_oof_pred, pos_label=0)
+spec_lr  = recall_score(y, lr_oof_pred,  pos_label=0)
+spec_dt  = recall_score(y, dt_oof_pred,  pos_label=0)
+
+spec_df = pd.DataFrame({
+    'Model': ['kNN', 'Logistic Regression', 'Decision Tree'],
+    'Specificity (True Negative Rate)': [spec_knn, spec_lr, spec_dt]
+})
+print(spec_df.round(3))
+
+```
+
+- For the kNN model, the model correctly identified about 72% of patients who were truly not at risk of a heart attack.
+- For the Logistic Regression model, the model correctly identified about 74% of patients who were truly not at risk of a heart attack.
+- For the Decision Tree model, the model correctly identified about 67% of patients who were truly not at risk of a heart attack.
+
+
+# Part Three: Discussion
+
+*Suppose you have been hired by a hospital to create classification models for heart attack risk.*
+*The following questions give a possible scenario for why the hospital is interested in these models. For each one, discuss:*
+- Which metric(s) you would use for model selection and why.
+- Which of your final models (Part One Q1-3) you would recommend to the hospital, and why.
+- What score you should expect for your chosen metric(s) using your chosen model to predict future observations.
+
+
+**Q1: The hospital faces severe lawsuits if they deem a patient to be low risk, and that patient later experiences a heart attack.**
+
+- Which metric: Recall
+- Why this metric: Optimizing recall can be used to minimize the false negative rate for at risk patients. Maximizing recall can directly minimize the risk of false negatives.
+
+- Which model: Logistic Regression
+- Why this model: The Logistic Regression model had the highest recall while still maintaining a fairly good precision and sensitivity. If the hospital wanted to reduce the number of false negatives they classify in order to minimize legal risk, they can lower the classification threshold easily and expect Recall to increase(meaning they'd misclassify less false negatives). If they lower this threshold, they can increase the Recall value, reducing false negative classifications and also reducing legal risk for the hospital.
+
+- Expected Score for Chosen Metric: Using the default threshold(0.5) the hospital can expect a Recall of    0.81 for future observations. 
+
+**Q2: The hospital is overfull, and wants to only use bed space for patients most in need of monitoring due to heart attack risk.**
+
+- Which metric: Precision
+- Why this metric: When beds are scarce, a false positive (classifying a not at risk patient as at risk of a heart attack) is costly. High precision means most flagged patients truly need monitoring.
+
+- Which model: Logistic Regression
+- Why this model: This model has the highest precision of all of my models. If the hospital needed to further tighten classification of at risk versus not at risk, they could raise the decision threshold effectively increasing precision(although recall will go down meaning some true at risk patients might not be admitted). 
+
+- Expected Score for Chosen Metric: For future observations, the hospital should expect a Precision value of about 0.78.
+
+
+**Q3: The hospital is studying root causes of heart attacks, and would like to understand which biological measures are associated with heart attack risk.**
+
+- Which metric: Coefficient(model interpretability)
+- Why this metric: The hospital’s goal is not just to predict heart attacks but to understand the underlying causes and relationships between biological measures and heart attack risk. Model interpretability metrics like coefficient values directly show how each feature contributes to risk.
+
+- Which model: Logistic Regression
+- Why this model: Logistic Regression is a parametric and interpretable model that provides coefficients indicating the direction and strength of each predictor’s relationship with heart attack risk. These relationships are measurable, making Logistic Regression the best choice for identifying and understanding biological factors associated with heart attack risk(kNN and Decision Tree don't give coefficients). 
+
+- Expected Scores for Chosen Metric: Since I chose the coefficients as the metric for model selection, the model’s coefficients provide interpretable insights into which biological measures (such as thalach, age, and chest pain type) are most strongly associated with heart attack risk. For instance, for maximum heart rate achieved (thalach), has a positive coefficient, which indicates that higher heart rate values are associated with an increased likelihood of heart attack risk. Conversely, age has a negative coefficient, meaning that as patient age increases, the predicted probability of being classified as at risk decreases, suggesting younger patients in this dataset were more likely to be identified as at risk. Lastly, the chest pain type variables (cp_1, cp_2, and cp_3) all have strong positive coefficients, showing that patients experiencing more symptomatic forms of chest pain have a higher predicted probability of heart attack risk compared to the baseline asymptomatic group (cp_0). These coefficients together help the hospital understand which biological factors most strongly influence heart attack risk and the direction of those effects.(Values of actual metrics for this model: Recall = 0.81, Precision = 0.78, Accuracy = 0.78, ROC AUC = 0.864)
+
+
+**Q4: The hospital is training a new batch of doctors, and they would like to compare the diagnoses of these doctors to the predictions given by the algorithm to measure the ability of new doctors to diagnose patients.**
+
+- Which metric: Accuracy
+- Why this metric: When comparing doctors’ diagnoses to model predictions, the hospital wants to measure how often the model and the doctors agree on the same classification (at risk vs. not at risk). Accuracy captures the overall agreement rate between the two.
+
+- Which model: Logistic Regression
+- Why this model: Logistic Regression provides the highest overall performance across metrics (Accuracy = 0.78, Precision = 0.78, Recall = 0.81, Specificity = 0.74) and produces consistent, explainable predictions that can be directly compared to doctors’ diagnoses. Its interpretability also makes it easier to explain discrepancies. This suggests that the model’s predictions are both reliable and balanced, allowing meaningful comparison with new doctors’ diagnostic accuracy and identifying areas where additional training might be needed. For example, identifying which features (thalach, age, chest pain type) caused the model to predict “at risk” when doctors did not.
+
+- Expected Scores for Chosen Metric: Based on cross validated results, the hospital should expect the Logistic Regression model to agree with doctors’ classifications about 78% of the time (Accuracy = 0.78). Expected Precision and Recall values are 0.78 and 0.81. 
+
+
+# Part Four: Validation
+
+*Random 10% of the observations to serve as a final validation set.*
+```{python}
+
+ha_validation = pd.read_csv("https://www.dropbox.com/s/jkwqdiyx6o6oad0/heart_attack_validation.csv?dl=1")
+
+X_val = ha_validation.drop('output', axis=1)
+y_val = ha_validation['output']
+
+```
+
+**Use each of your final models in Part One Q1-3, predict the target variable in the validation dataset. For each, output a confusion matrix, and report the ROC AUC, the precision, and the recall.**
+
+*kNN*
+```{python}
+
+#predictions based on best fitted kNN model
+knn_y_val_pred = knn.best_estimator_.predict(X_val)
+knn_y_val_proba = knn.best_estimator_.predict_proba(X_val)[:, 1]
+
+#confusion matrix
+cm_knn_val = confusion_matrix(y_val, knn_y_val_pred)
+print("Confusion Matrix (Validation - kNN):")
+print(cm_knn_val)
+knn_valid = ConfusionMatrixDisplay(confusion_matrix=cm_knn_val,
+                                         display_labels=['No Risk', 'At Risk'])
+knn_valid.plot()
+plt.title('KNN - Validation Set Confusion Matrix')
+plt.show()
+
+#ROC AUC score, Precision score, Recall Score
+rocauc_knn_val = roc_auc_score(y_val, knn_y_val_proba)
+precision_knn_val = precision_score(y_val, knn_y_val_pred)
+recall_knn_val = recall_score(y_val, knn_y_val_pred)
+
+print(f"\nValidation ROC AUC: {rocauc_knn_val:.3f}")
+print(f"Validation Precision: {precision_knn_val:.3f}")
+print(f"Validation Recall: {recall_knn_val:.3f}")
+
+```
+
+
+*Logistic Regression*
+```{python}
+
+#predictions based on best fitted Logistic Regression model
+lr_y_val_pred = lr.best_estimator_.predict(X_val)
+lr_y_val_proba = lr.best_estimator_.predict_proba(X_val)[:, 1]
+
+#confusion matrix
+cm_lr_val = confusion_matrix(y_val, lr_y_val_pred)
+print("Confusion Matrix (Validation - Logistic Regression):")
+print(cm_lr_val)
+lr_valid = ConfusionMatrixDisplay(confusion_matrix=cm_lr_val,
+                                         display_labels=['No Risk', 'At Risk'])
+lr_valid.plot()
+plt.title('Logistic Regression - Validation Set Confusion Matrix')
+plt.show()
+
+#ROC AUC score, Precision score, Recall Score
+rocauc_lr_val = roc_auc_score(y_val, lr_y_val_proba)
+precision_lr_val = precision_score(y_val, lr_y_val_pred)
+recall_lr_val = recall_score(y_val, lr_y_val_pred)
+
+print(f"\nValidation ROC AUC: {rocauc_lr_val:.3f}")
+print(f"Validation Precision: {precision_lr_val:.3f}")
+print(f"Validation Recall: {recall_lr_val:.3f}")
+
+```
+
+
+*Decision Tree*
+```{python}
+
+#predictions based on best fitted Decision Tree model
+dt_y_val_pred = dt.best_estimator_.predict(X_val)
+dt_y_val_proba = dt.best_estimator_.predict_proba(X_val)[:, 1]
+
+#confusion matrix
+cm_dt_val = confusion_matrix(y_val, dt_y_val_pred)
+print("Confusion Matrix (Validation - Decision Tree):")
+print(cm_dt_val)
+dt_valid = ConfusionMatrixDisplay(confusion_matrix=cm_dt_val,
+                                         display_labels=['No Risk', 'At Risk'])
+dt_valid.plot()
+plt.title('Decision Tree - Validation Set Confusion Matrix')
+plt.show()
+
+#ROC AUC score, Precision score, Recall Score
+rocauc_dt_val = roc_auc_score(y_val, dt_y_val_proba)
+precision_dt_val = precision_score(y_val, dt_y_val_pred)
+recall_dt_val = recall_score(y_val, dt_y_val_pred)
+
+print(f"\nValidation ROC AUC: {rocauc_dt_val:.3f}")
+print(f"Validation Precision: {precision_dt_val:.3f}")
+print(f"Validation Recall: {recall_dt_val:.3f}")
+
+```
+
+
+**Compare these values to the cross-validated estimates you reported in Part One and Part Two.**
+
+*Manual Calculations of Precison and Recall for Part 1 Models*
+```{python}
+
+report_knn = classification_report(y, knn_ypred, output_dict=True)
+precision_knn_cv = round(report_knn['1']['precision'],2)
+recall_knn_cv = round(report_knn['1']['recall'],2)
+
+report_lr = classification_report(y, lr_ypred, output_dict=True)
+precision_lr_cv = round(report_lr['1']['precision'],2)
+recall_lr_cv = round(report_lr['1']['recall'],2)
+
+report_dt = classification_report(y, dt_ypred, output_dict=True)
+precision_dt_cv = round(report_dt['1']['precision'],2)
+recall_dt_cv = round(report_dt['1']['recall'],2)
+
+```
+
+
+*Table of Model Success Comparison Between Part 1 & Part 4*
+```{python}
+
+#Cross validated results(part I)
+cv_results = pd.DataFrame({
+    'Model': ['kNN', 'Logistic Regression', 'Decision Tree'],
+    'CV_ROC_AUC': [knn_cv_mean_auc, lr_cv_mean_auc, dt_cv_mean_auc],
+    'CV_Precision': [precision_knn_cv, precision_lr_cv, precision_dt_cv],
+    'CV_Recall': [recall_knn_cv, recall_lr_cv, recall_dt_cv]
+})
+
+#Validation results(part IV)
+val_results = pd.DataFrame({
+    'Model': ['kNN', 'Logistic Regression', 'Decision Tree'],
+    'Val_ROC_AUC': [rocauc_knn_val, rocauc_lr_val, rocauc_dt_val],
+    'Val_Precision': [precision_knn_val, precision_lr_val, precision_dt_val],
+    'Val_Recall': [recall_knn_val, recall_lr_val, recall_dt_val]
+})
+
+#Merge dfs and reorder to columns to look better
+comparison_df = pd.merge(cv_results, val_results, on='Model')
+comparison_df = comparison_df[[
+    'Model',
+    'CV_ROC_AUC', 'Val_ROC_AUC',
+    'CV_Precision', 'Val_Precision',
+    'CV_Recall', 'Val_Recall'
+]]
+
+#Round for readability if not already rounded before
+comparison_df.round(3)
+
+```
+
+**Did our measure of model success turn out to be approximately correct for the validation data?**
+
+*Differences between metrics to see how correct the measures of model success were*
+```{python}
+
+comparison_diff = comparison_df.copy()
+comparison_diff['ROC_AUC_Diff'] = (comparison_diff['Val_ROC_AUC'] - comparison_diff['CV_ROC_AUC']).round(3)
+comparison_diff['Precision_Diff'] = (comparison_diff['Val_Precision'] - comparison_diff['CV_Precision']).round(3)
+comparison_diff['Recall_Diff'] = (comparison_diff['Val_Recall'] - comparison_diff['CV_Recall']).round(3)
+
+# Select columns for display
+comparison_diff = comparison_diff[['Model',
+                                   'ROC_AUC_Diff',
+                                   'Precision_Diff',
+                                   'Recall_Diff']]
+
+comparison_diff
+
+```
+
+- Across all three models, the validation metrics were close to the cross validated results, confirming that the cross validation process provided reliable estimates of model performance on unseen data.
+
+- kNN
+    - For the kNN model, the ROC AUC increased slightly from 0.788 (CV) to 0.801 (Validation), showing that its ability to distinguish between at risk and not at risk patients remained stable. Precision improved from 0.74 to 0.80, indicating that the model made fewer false positive predictions on the validation data; However, recall decreased from 0.69 to 0.63, suggesting that the model correctly identified slightly fewer true at risk patients. Overall, kNN performed comparably to its cross validated estimates, with only minor variations likely due to sampling differences.
+
+- Logistic Regression
+    - For the Logistic Regression model, performance on the validation set very closely mirrored the cross validation results. The ROC AUC increased marginally from 0.864 to 0.876, confirming strong generalization and discriminative power. Precision rose slightly from 0.78 to 0.83, showing better accuracy in predicting at risk patients, while recall dipped slightly from 0.81 to 0.79, indicating a very small decrease in the proportion of correctly identified at risk patients. These minimal differences demonstrate that Logistic Regression remained highly consistent and stable across both datasets, reaffirming it as the most reliable  model.
+
+- Decision Tree
+    - For the Decision Tree model, the ROC AUC improved from 0.755 (CV) to 0.785 (Validation), indicating a somewhat significant gain in overall classification performance. Precision increased more substantially, from 0.72 to 0.86 suggesting the model became more cautious and produced fewer false positives on new data; However, recall dropped from 0.73 to 0.63, meaning it missed slightly more true at risk cases compared to its cross validation performance. 
+
+- Overall, these small differences between the cross validation and validation results were within reasonable variation and confimed that the cross validation process provided fairly accurate estimates of the Out-of-Sample performance. While the kNN and Decision Tree models showed somewhat larger shifts between precision and recall between the two models, Logistic Regresion continued to stay the most balanced and consistent model, maintaining strong generalization and reliability on unseen data.
+
+
+# Part Five: Cohen's Kappa
+
+- Cohen’s Kappa measures how well a model’s predictions agree with the true classifications after accounting for the agreement that could happen by chance. Essentially, Cohen’s Kappa tells us how reliable and consistent a model’s classifications are, beyond what would be expected just by luck/random chance.
+
+    - A Kappa of 1 means perfect agreement between predictions and actual values.
+
+    - A Kappa of 0 means the model’s predictions are no better than random guessing.
+
+    - A Kappa less than 0 means the model performs worse than random chance.
+
+
+**Cross Validated Cohen Kappa Scores(Part I Models, Q1-Q3)**
+```{python}
+
+kappa_knn_cv = cohen_kappa_score(y, knn_ypred)
+kappa_lr_cv  = cohen_kappa_score(y, lr_ypred)
+kappa_dt_cv  = cohen_kappa_score(y, dt_ypred)
+
+kappa_cv_df = pd.DataFrame({
+    'Model': ['kNN', 'Logistic Regression', 'Decision Tree'],
+    'CV_Kappa': [kappa_knn_cv, kappa_lr_cv, kappa_dt_cv]
+})
+
+print("Cohen's Kappa: Cross Validated (OOF)")
+kappa_cv_df.round(3)
+
+```
+
+
+**Validation Set Cohen Kappa Scores(Part IV Models)**
+```{python}
+
+kappa_knn_val = cohen_kappa_score(y_val, knn_y_val_pred)
+kappa_lr_val  = cohen_kappa_score(y_val, lr_y_val_pred)
+kappa_dt_val  = cohen_kappa_score(y_val, dt_y_val_pred)
+
+kappa_val_df = pd.DataFrame({
+    'Model': ['kNN', 'Logistic Regression', 'Decision Tree'],
+    'Val_Kappa': [kappa_knn_val, kappa_lr_val, kappa_dt_val]
+})
+
+print("Cohen's Kappa: Validation Set")
+kappa_val_df.round(3)
+
+```
+
+
+**Discuss reasons or scenarios that would make us prefer to use this metric as our measure of model success.**
+
+- Scenarios where we may prefer to use Cohen's Kappa as our measure of model success might include:
+    - When class imbalance exists(like if one class, say "not at risk" is much more common than the other class. Cohen's Kappa can be much more useful as a metric, as in situations like these, metrics like accuracy can be wrong since the model may just predict the majority class being that its more common. Kappa removes the portion of agreement that is due to chance and corrects the model.)
+    - We are seeking overall reliability(Cohen's Kappa account for both false positive and false negatives in one measurement)
+    - If we wanted to compare the consistency between two classifiers such as a model and a doctor's diagnosis(like Problem 3 Question 4)
+
+
+**Cross Validation Measure of Success Rankings**
+```{python}
+
+#Rank models by Cohen's Kappa
+print("Cross Validation Model Rankings by Cohen's Kappa:")
+print(kappa_cv_df.sort_values('CV_Kappa', ascending=False)[['Model', 'CV_Kappa']].round(3).to_string(index=False))
+
+#Rank models by ROC AUC
+print("Cross Validation Model Rankings by ROC AUC:")
+print(comparison_df.sort_values('CV_ROC_AUC', ascending=False)[['Model', 'CV_ROC_AUC']].round(3).to_string(index=False))
+
+#Rank models by Recall
+print("Cross Validation Model Rankings by Recall:")
+print(comparison_df.sort_values('CV_Recall', ascending=False)[['Model', 'CV_Recall']].round(3).to_string(index=False))
+
+#Rank models by Precision
+print("Cross Validation Model Rankings by Precision:")
+print(comparison_df.sort_values('CV_Precision', ascending=False)[['Model', 'CV_Precision']].round(3).to_string(index=False))
+
+```
+
+
+**Validated Data Measure of Success Rankings**
+```{python}
+
+#Rank models by Cohen's Kappa
+print("Validation Dataset Model Rankings by Cohen's Kappa:")
+print(kappa_val_df.sort_values('Val_Kappa', ascending=False)[['Model', 'Val_Kappa']].round(3).to_string(index=False))
+
+#Rank models by ROC AUC
+print("Validation Dataset Model Rankings by ROC AUC:")
+print(comparison_df.sort_values('Val_ROC_AUC', ascending=False)[['Model', 'Val_ROC_AUC']].round(3).to_string(index=False))
+
+#Rank models by Recall
+print("Validation Dataset Model Rankings by Recall:")
+print(comparison_df.sort_values('Val_Recall', ascending=False)[['Model', 'Val_Recall']].round(3).to_string(index=False))
+
+#Rank models by Precision
+print("Validation Dataset Model Rankings by Precision:")
+print(comparison_df.sort_values('Val_Precision', ascending=False)[['Model', 'Val_Precision']].round(3).to_string(index=False))
+
+```
+
+**Do your conclusions from above change if you judge your models using Cohen’s Kappa instead? Does this make sense?**
+
+- No, my conclusions from above don't change if I judge my models using Cohen's Kappa as my measure of success. Logistic Regression has the highest Cohen's Kappa value, meaning that it remains the best model. It is evident that Logistic Regression is overall the best method for both the cross validation data as well as the validation data as it ranks the best for every measure of success that I tested.
+
+- This makes sense as Cohen's Kappa measures agreement beyond chance. This means that models that correctly separate classes will improve overall agreement as well as agreement beyond chance. The Logistic Regression model also had the strongest and most balanced profile in terms of measure of success(most balanced Precision, Recall, Sensitivity, etc.), so based on this it isn't surprising it also had the highest Cohen's Kappa value. In summary, it seems evident that a model that is based on balanced metrics will also usually look the best using Cohen's Kappa as it assigns score based on the overall correctness of classification of all classes, not just one.
