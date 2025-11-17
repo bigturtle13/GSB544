@@ -183,7 +183,7 @@ print(cm)
 lr_cm = ConfusionMatrixDisplay(confusion_matrix=cm,
                                          display_labels=['No Risk', 'At Risk'])
 lr_cm.plot()
-plt.title('KNN - Logistic Regression')
+plt.title('Logistic Regression - Confusion Matrix')
 plt.show()
 
 
@@ -265,7 +265,7 @@ print(cm)
 dt_cm = ConfusionMatrixDisplay(confusion_matrix=cm,
                                          display_labels=['No Risk', 'At Risk'])
 dt_cm.plot()
-plt.title('KNN - Decision Tree')
+plt.title('Decision Tree - Logistic Regression')
 plt.show()
 
 
