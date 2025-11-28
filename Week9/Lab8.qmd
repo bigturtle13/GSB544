@@ -1,0 +1,1244 @@
+---
+title: "Lab 8"
+format:
+  html:
+    theme : cosmo
+    code-fold: true
+    embed-resources: true
+jupyter: gsb544
+execute:
+    echo: true
+---
+
+[Link to my Github Repository](https://github.com/bigturtle13/GSB544/tree/main/Week9)
+
+# Import Packages
+
+```{python}
+
+import pandas as pd
+import numpy as np
+from plotnine import *
+from sklearn.pipeline import Pipeline
+from sklearn.compose import make_column_selector, ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, PolynomialFeatures
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet, LogisticRegression
+from sklearn.model_selection import cross_val_score, GridSearchCV, cross_val_predict
+import matplotlib.pyplot as plt
+from sklearn.metrics import *
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+from sklearn.tree import DecisionTreeRegressor, plot_tree, DecisionTreeClassifier
+from sklearn.neighbors import KNeighborsRegressor, KNeighborsClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from sklearn.svm import SVC
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+warnings.filterwarnings("ignore")
+
+```
+
+# Part 0. Data Cleaning
+
+```{python}
+
+df = pd.read_csv("/Users/amritdhillon/Desktop/GSB544/Week 9/cannabis_full.csv")
+
+print("Shape:", df.shape)
+print("\nCannabis Type value counts:")
+print(df["Type"].value_counts())
+
+cc = df.drop(columns = ["Effects", "Flavor", "Strain"])
+cc = cc.dropna()
+
+print("\nCleaned shape:", cc.shape)
+print("\nCleaned Type value counts:")
+print(cc["Type"].value_counts())
+
+```
+
+
+# Part One: Binary Classification
+
+
+**Data Cleaning**
+```{python}
+
+#keeps only Sativa and Indica strains
+cc2 = cc[cc["Type"].isin(["sativa", "indica"])].copy()
+
+print("Binary dataset shape:", cc2.shape)
+print("\nType value counts (binary dataset):")
+print(cc2["Type"].value_counts())
+
+#predictors and target
+X_bin = cc2.drop(columns=["Type"])
+y_bin = cc2["Type"]
+
+
+print("\nDtypes of predictors after conversion:")
+print(X_bin.dtypes.value_counts())
+
+
+```
+
+I chose accuracy as my scoring metric since there is no "correct" category/class. Neither Indica or Sativa is the "correct" class, so I felt that overall accuracy made the most sense to use as a metric. The cross validation predictions were fairly similar to the predictions made by the final fitted model.
+
+
+**Q1: LDA**
+```{python}
+
+lda = LinearDiscriminantAnalysis()
+
+#5 fold cross validation using accuracy as scoring metric
+lda_cv_scores = cross_val_score(lda, X_bin, y_bin, cv=5, scoring="accuracy")
+print("\nLDA cross-validated accuracy scores:", lda_cv_scores)
+print("Mean CV accuracy:", lda_cv_scores.mean())
+
+#Cross validated predictions for confusion matrix
+y_pred_cv = cross_val_predict(lda, X_bin, y_bin, cv=5)
+print("\nConfusion matrix (cross-validated predictions):")
+print(confusion_matrix(y_bin, y_pred_cv, labels=["indica", "sativa"]))
+cm = confusion_matrix(y_bin, y_pred_cv)
+ldacv_cm = ConfusionMatrixDisplay(confusion_matrix=cm,display_labels=["indica", "sativa"])
+ldacv_cm.plot()
+plt.title('LDA Cross Validated Predictions - Confusion Matrix')
+plt.show()
+
+#final LDA model on the full dataset
+lda_final = LinearDiscriminantAnalysis()
+lda_final.fit(X_bin, y_bin)
+
+#for comparison
+
+y_pred_final = lda_final.predict(X_bin)
+
+print("\nConfusion matrix (final model predictions):")
+print(confusion_matrix(y_bin, y_pred_final, labels=["indica", "sativa"]))
+cm2 = confusion_matrix(y_bin, y_pred_final)
+ldaf_cm = ConfusionMatrixDisplay(confusion_matrix=cm2,display_labels=["indica", "sativa"])
+ldaf_cm.plot()
+plt.title('LDA Final Predictions - Confusion Matrix')
+plt.show()
+
+
+print("\nFinal model accuracy:",
+      accuracy_score(y_bin, y_pred_final))
+
+
+```
+
+
+**Q2: QDA**
+```{python}
+
+qda = QuadraticDiscriminantAnalysis()
+
+#5 fold cross validation using accuracy as scoring metric
+qda_cv_scores = cross_val_score(qda, X_bin, y_bin, cv=5, scoring="accuracy")
+print("\nQDA cross-validated accuracy scores:", qda_cv_scores)
+print("Mean CV accuracy:", qda_cv_scores.mean())
+
+#Cross validated predictions for confusion matrix
+qda_y_pred_cv = cross_val_predict(qda, X_bin, y_bin, cv=5)
+print("\nConfusion matrix (cross-validated predictions):")
+print(confusion_matrix(y_bin, qda_y_pred_cv, labels=["indica", "sativa"]))
+cm3 = confusion_matrix(y_bin, qda_y_pred_cv)
+qdacv_cm = ConfusionMatrixDisplay(confusion_matrix=cm3,display_labels=["indica", "sativa"])
+qdacv_cm.plot()
+plt.title('QDA Cross Validated Predictions - Confusion Matrix')
+plt.show()
+
+
+#final QDA model on the full dataset
+qda_final = QuadraticDiscriminantAnalysis()
+qda_final.fit(X_bin, y_bin)
+
+#for comparison
+
+qda_y_pred_final = qda_final.predict(X_bin)
+
+print("\nConfusion matrix (final model predictions):")
+print(confusion_matrix(y_bin, qda_y_pred_final, labels=["indica", "sativa"]))
+cm4 = confusion_matrix(y_bin, qda_y_pred_final)
+qdaf_cm = ConfusionMatrixDisplay(confusion_matrix=cm4,display_labels=["indica", "sativa"])
+qdaf_cm.plot()
+plt.title('QDA Final Predictions - Confusion Matrix')
+plt.show()
+
+
+print("\nFinal model accuracy:",
+      accuracy_score(y_bin, qda_y_pred_final))
+
+```
+
+
+**Q3: SVC**
+```{python}
+
+svc = SVC(kernel="linear")
+
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+#5 fold cross validation using accuracy as scoring metric
+svc_grid = GridSearchCV(svc, param_grid, cv=5, scoring="accuracy")
+svc_grid.fit(X_bin, y_bin)
+print("Best C:", svc_grid.best_params_)
+print("Best Cross Validation accuracy:", svc_grid.best_score_)
+
+# Cross-validated predictions with best model
+svc_best = svc_grid.best_estimator_
+
+svc_y_pred_cv = cross_val_predict(svc_best, X_bin, y_bin, cv=5)
+
+print("\nConfusion matrix (cross-validated predictions):")
+print(confusion_matrix(y_bin, svc_y_pred_cv, labels=["indica", "sativa"]))
+cm5 = confusion_matrix(y_bin, svc_y_pred_cv)
+svccv_cm = ConfusionMatrixDisplay(confusion_matrix=cm5,display_labels=["indica", "sativa"])
+svccv_cm.plot()
+plt.title('SVC Cross Validated Predictions - Confusion Matrix')
+plt.show()
+
+
+# Final model on full dataset
+svc_final = svc_best
+svc_final.fit(X_bin, y_bin)
+
+svc_y_pred_final = svc_final.predict(X_bin)
+
+print("\nFinal model accuracy:", accuracy_score(y_bin, svc_y_pred_final))
+print("Confusion matrix (final model):")
+print(confusion_matrix(y_bin, svc_y_pred_final, labels=["indica", "sativa"]))
+cm6 = confusion_matrix(y_bin, svc_y_pred_final)
+svcf_cm = ConfusionMatrixDisplay(confusion_matrix=cm6,display_labels=["indica", "sativa"])
+svcf_cm.plot()
+plt.title('SVC Final Predictions - Confusion Matrix')
+plt.show()
+
+
+```
+
+
+**Q4: SVM**
+```{python}
+
+svm = SVC(kernel="poly")
+
+#C and degree for the polynomial kernel
+svm_param_grid = {"C": [0.01, 0.1, 1, 5, 10], "degree": [2, 3, 4, 5, 6]}
+svm_grid = GridSearchCV(svm, svm_param_grid, cv=5, scoring="accuracy")
+svm_grid.fit(X_bin, y_bin)
+
+print("Best parameters for SVM (poly):", svm_grid.best_params_)
+print("Best cross validated accuracy (SVM, poly):", svm_grid.best_score_)
+
+# Cross-validated predictions with best SVM model
+svm_best = svm_grid.best_estimator_
+svm_y_pred_cv = cross_val_predict(svm_best, X_bin, y_bin, cv=5)
+print("\nConfusion matrix (cross validated predictions):")
+print(confusion_matrix(y_bin, svm_y_pred_cv, labels=["indica", "sativa"]))
+cm7 = confusion_matrix(y_bin, svm_y_pred_cv)
+svmcv_cm = ConfusionMatrixDisplay(confusion_matrix=cm7,display_labels=["indica", "sativa"])
+svmcv_cm.plot()
+plt.title('SVM Cross Validated Predictions - Confusion Matrix')
+plt.show()
+
+
+#Final SVM model on full dataset
+svm_final = svm_best
+svm_final.fit(X_bin, y_bin)
+svm_y_pred_final = svm_final.predict(X_bin)
+
+print("\nFinal model accuracy (SVM, poly):", accuracy_score(y_bin, svm_y_pred_final))
+print("Confusion matrix (final SVM model):")
+print(confusion_matrix(y_bin, svm_y_pred_final, labels=["indica", "sativa"]))
+cm8 = confusion_matrix(y_bin, svc_y_pred_final)
+svcf_cm = ConfusionMatrixDisplay(confusion_matrix=cm8,display_labels=["indica", "sativa"])
+svcf_cm.plot()
+plt.title('SVM Final Predictions - Confusion Matrix')
+plt.show()
+
+```
+
+**Comparison of Accuracy Scores for Cross Validation and Final Models**
+```{python}
+
+
+results_df = pd.DataFrame({
+    "Model": ["LDA", "QDA", "SVC (Linear)", "SVM (Poly)"],
+    "Cross Validated Accuracy": [
+        lda_cv_scores.mean(),
+        qda_cv_scores.mean(),
+        svc_grid.best_score_,
+        svm_grid.best_score_
+    ],
+    "Final Model Accuracy": [
+        accuracy_score(y_bin, y_pred_final),
+        accuracy_score(y_bin, qda_y_pred_final),
+        accuracy_score(y_bin, svc_y_pred_final),
+        accuracy_score(y_bin, svm_y_pred_final)
+    ]
+}); results_df
+
+```
+
+
+# Part Two: Natural Multiclass
+
+Now use the full dataset, including the Hybrid strains.
+
+
+**Q1: Fit a decision tree, plot the final fit, and interpret the results.**
+```{python}
+
+cc_full = cc.copy()
+
+X_full = cc_full.drop(columns=["Type"])
+y_full = cc_full["Type"]
+
+tree = DecisionTreeClassifier(random_state=123)
+
+tree_cv_scores = cross_val_score(tree, X_full, y_full, cv=5, scoring="accuracy")
+print("Decision Tree cross validated accuracy:", tree_cv_scores)
+print("Mean Cross Validated accuracy:", tree_cv_scores.mean())
+
+#fit tree on full data
+tree.fit(X_full, y_full)
+
+plt.figure(figsize=(16, 10))
+plot_tree(tree, feature_names=X_full.columns, class_names=tree.classes_,
+filled=True)
+plt.title("Decision Tree")
+plt.show()
+
+#interpret results
+tree_pred_final = tree.predict(X_full)
+#decision tree model will definitely overfit, but i included to follow same formatting as prior problem
+print("\nFinal model accuracy (Decision Tree):", accuracy_score(y_full, tree_pred_final))
+cm9 = confusion_matrix(y_full, tree_pred_final, labels=["indica", "sativa", "hybrid"])
+disp = ConfusionMatrixDisplay(confusion_matrix=cm9, display_labels=["indica", "sativa", "hybrid"])
+disp.plot()
+plt.title("Decision Tree – Final Model Confusion Matrix")
+plt.show()
+
+```
+
+- The mean cross validated accuracy of about .4997 for the Decision Tree makes sense as it has a difficult time with multiclass classification, so the accuracy drops significantly.
+- There are many dummy variables within the dataset which creates many binary columns for the Decision Tree model to analyze and it confuses the tree, so the roughly 50% accuracy is normal.
+- The final model accuracy makes sense as well as Decision Trees tend to overfit on data like this and memorized the patterns in the training dataset too closely.
+
+**Q2: Repeat the analyses from Part One for LDA, QDA, and KNN.**
+
+*LDA*
+```{python}
+
+
+lda2 = LinearDiscriminantAnalysis()
+
+#5 fold cross validation using accuracy as scoring metric
+lda_cv_scores2 = cross_val_score(lda2, X_full, y_full, cv=5, scoring="accuracy")
+print("\nLDA cross-validated accuracy scores:", lda_cv_scores2)
+print("Mean CV accuracy:", lda_cv_scores2.mean())
+
+#Cross validated predictions for confusion matrix
+y_pred_cv2 = cross_val_predict(lda2, X_full, y_full, cv=5)
+print("\nConfusion matrix (cross-validated predictions):")
+print(confusion_matrix(y_full, y_pred_cv2, labels=["indica", "sativa", "hybrid"]))
+cm10 = confusion_matrix(y_full, y_pred_cv2)
+ldacv_cm2 = ConfusionMatrixDisplay(confusion_matrix=cm10,display_labels=["indica", "sativa", "hybrid"])
+ldacv_cm2.plot()
+plt.title('LDA Cross Validated Predictions - Confusion Matrix')
+plt.show()
+
+#final LDA model on the full dataset
+lda_final2 = LinearDiscriminantAnalysis()
+lda_final2.fit(X_full, y_full)
+
+#for comparison
+
+y_pred_final2 = lda_final2.predict(X_full)
+
+print("\nConfusion matrix (final model predictions):")
+print(confusion_matrix(y_full, y_pred_final2, labels=["indica", "sativa", "hybrid"]))
+cm11 = confusion_matrix(y_full, y_pred_final2)
+ldaf_cm2 = ConfusionMatrixDisplay(confusion_matrix=cm11,display_labels=["indica", "sativa", "hybrid"])
+ldaf_cm2.plot()
+plt.title('LDA Final Predictions - Confusion Matrix')
+plt.show()
+
+
+print("\nFinal model accuracy:",
+      accuracy_score(y_full, y_pred_final2))
+
+
+```
+
+
+*QDA*
+```{python}
+
+
+qda2 = QuadraticDiscriminantAnalysis()
+
+#5 fold cross validation using accuracy as scoring metric
+qda_cv_scores2 = cross_val_score(qda2, X_full, y_full, cv=5, scoring="accuracy")
+print("\nQDA cross-validated accuracy scores:", qda_cv_scores2)
+print("Mean CV accuracy:", qda_cv_scores2.mean())
+
+#Cross validated predictions for confusion matrix
+qda_y_pred_cv2 = cross_val_predict(qda2, X_full, y_full, cv=5)
+print("\nConfusion matrix (cross-validated predictions):")
+print(confusion_matrix(y_full, qda_y_pred_cv2, labels=["indica", "sativa", "hybrid"]))
+cm12 = confusion_matrix(y_full, qda_y_pred_cv2)
+qdacv_cm2 = ConfusionMatrixDisplay(confusion_matrix=cm12,display_labels=["indica", "sativa", "hybrid"])
+qdacv_cm2.plot()
+plt.title('QDA Cross Validated Predictions - Confusion Matrix')
+plt.show()
+
+#final QDA model on the full dataset
+qda_final2 = QuadraticDiscriminantAnalysis()
+qda_final2.fit(X_full, y_full)
+
+#for comparison
+
+qda_y_pred_final2 = qda_final2.predict(X_full)
+
+print("\nConfusion matrix (final model predictions):")
+print(confusion_matrix(y_full, qda_y_pred_final2, labels=["indica", "sativa", "hybrid"]))
+cm13 = confusion_matrix(y_full, qda_y_pred_final2)
+qdaf_cm2 = ConfusionMatrixDisplay(confusion_matrix=cm13,display_labels=["indica", "sativa", "hybrid"])
+qdaf_cm2.plot()
+plt.title('QDA Final Predictions - Confusion Matrix')
+plt.show()
+
+
+print("\nFinal model accuracy:",
+      accuracy_score(y_full, qda_y_pred_final2))
+
+
+```
+
+
+*KNN*
+```{python}
+
+knn = KNeighborsClassifier()
+
+knn_param_grid = {
+    "n_neighbors": [3, 5, 7, 9, 11],
+}
+
+knn_grid = GridSearchCV(knn, knn_param_grid, cv=5, scoring="accuracy")
+knn_grid.fit(X_full, y_full)
+
+print("Best parameters for KNN:", knn_grid.best_params_)
+print("Best cross validated accuracy:", knn_grid.best_score_)
+
+#Cross validated predictions with best KNN model
+knn_best = knn_grid.best_estimator_
+knn_y_pred_cv = cross_val_predict(knn_best, X_full, y_full, cv=5)
+
+print("\nConfusion matrix (cross validated predictions):")
+print(confusion_matrix(y_full, knn_y_pred_cv, labels=["indica", "sativa", "hybrid"]))
+cm14 = confusion_matrix(y_full, knn_y_pred_cv)
+knncv_cm = ConfusionMatrixDisplay(confusion_matrix=cm14,
+                                   display_labels=["indica", "sativa", "hybrid"])
+knncv_cm.plot()
+plt.title("KNN Cross Validated Predictions - Confusion Matrix")
+plt.show()
+
+# Final KNN model on full dataset
+knn_final = knn_best
+knn_final.fit(X_full, y_full)
+
+knn_y_pred_final = knn_final.predict(X_full)
+
+print("\nFinal model accuracy (KNN):", accuracy_score(y_full, knn_y_pred_final))
+print("Confusion matrix (final KNN model):")
+print(confusion_matrix(y_full, knn_y_pred_final, labels=["indica", "sativa", "hybrid"]))
+cm15 = confusion_matrix(y_full, knn_y_pred_final)
+knnf_cm = ConfusionMatrixDisplay(confusion_matrix=cm15,
+                                  display_labels=["indica", "sativa", "hybrid"])
+knnf_cm.plot()
+plt.title("KNN Final Predictions - Confusion Matrix")
+plt.show()
+
+```
+
+
+**Q3: Were your metrics better or worse than in Part One? Why? Which categories were most likely to get mixed up, according to the confusion matrices? Why?**
+```{python}
+
+results_compare = pd.DataFrame({
+    "Model": ["LDA", "QDA", "SVC (Linear)", "SVM (Poly)", "KNN"],
+
+    #Part One (Binary Classification)
+    "Part 1 CV Accuracy": [
+        lda_cv_scores.mean(),
+        qda_cv_scores.mean(),
+        svc_grid.best_score_,
+        svm_grid.best_score_,
+        None  #KNN not used in Part One
+    ],
+    #Part Two (Multiclass)
+    "Part 2 CV Accuracy": [
+        lda_cv_scores2.mean(),
+        qda_cv_scores2.mean(),
+        None, #SVC not used in Part Two
+        None, #SVM not used in Part Two
+        knn_grid.best_score_
+    ],
+    "Part 1 Final Accuracy": [
+        accuracy_score(y_bin, y_pred_final),
+        accuracy_score(y_bin, qda_y_pred_final),
+        accuracy_score(y_bin, svc_y_pred_final),
+        accuracy_score(y_bin, svm_y_pred_final),
+        None #KNN not used in Part One
+    ],
+    "Part 2 Final Accuracy": [
+        accuracy_score(y_full, y_pred_final2),
+        accuracy_score(y_full, qda_y_pred_final2),
+        None, #SVC not used in Part Two
+        None, #SVM not used in Part Two
+        accuracy_score(y_full, knn_y_pred_final)
+    ]
+});results_compare
+
+
+```
+
+- Across every model where comparable across both parts(LDA, QDA) the accuracy was much worse in part two(multiclass), as well as in general for KNN where accuracy was worse than all previous models besides QDA. 
+- This drop in accuracy is expected as multiclassification is more difficult for the models than binary classification.
+- Whereas in the binary classification models, models only needed to separate two classes(like Indica vs Sativa), in multiclassification models they must distinguish Indica vs Sativa vs Hybrid creating several issues such as more decision boundaries and greater potential for overlap. 
+
+- Across all confusion matrices in Part Two, the Hybrid strain class was consistently the hardest to classify correctly.
+- The Hybrid strains share attributes with both Indica and Sativa strains, making them signficantly harder to classify. Due to this issue the overall model accuracy drops as they have difficulty distinguishing the Hybrid strain with unclear class atrributes. Due to their combining of both relaxing and uplifting type results from the different strains their dummy variable patterns are similar to both Indica and Sativa.
+- Furthermore, the dataset contains far more Hybrid strains than either Indica or Sativa, which leads models to have bias towards predicting a strain as a Hybrid due to their dominance.
+- While in the binary classification models, strains like Indica vs Sativa were more easily classified due to their different effects, adding a third intermediate class like Hybrid reduces overall classification accuracy.
+
+
+# Part Three: Multiclass from Binary
+
+
+**Q1: Fit and report metrics for OvR versions of the models. That is, for each of the two model types, create three models:**
+```{python}
+
+#reusing X_full and y_full
+
+#OvR binary targets
+y_indica = (y_full == "indica").astype(int)
+y_sativa = (y_full == "sativa").astype(int)
+y_hybrid = (y_full == "hybrid").astype(int)
+
+```
+
+*SVC*
+*Indica vs. Not Indica*
+```{python}
+
+svc3 = SVC(kernel="linear")
+
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+grid = GridSearchCV(svc3, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_full, y_indica)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+svc_indica_cv = grid.best_score_
+
+#Cross validated predictions with best model
+best_svc = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_svc, X_full, y_indica, cv=5)
+
+print("Confusion Matrix (CV):")
+cm_indica_cv = confusion_matrix(y_indica, y_pred_cv)
+print(cm_indica_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_indica_cv, display_labels=["Not Indica", "Indica"])
+disp.plot()
+plt.title("SVC OvR Confusion Matrix – Not Indica vs Indica (CV)")
+plt.show()
+
+#model on full data
+final_svc = best_svc
+final_svc.fit(X_full, y_indica)
+final_pred = final_svc.predict(X_full)
+
+print("Final Accuracy (Indica vs Not Indica):", accuracy_score(y_indica, final_pred))
+svc_indica_final = accuracy_score(y_indica, final_pred)
+
+cm_indica_final = confusion_matrix(y_indica, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_indica_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_indica_final,display_labels=["Not Indica", "Indica"])
+disp_final.plot()
+plt.title("SVC OvR Confusion Matrix – Not Indica vs Indica (Final)")
+plt.show()
+
+```
+
+*Sativa vs. Not Sativa*
+```{python}
+
+grid = GridSearchCV(svc3, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_full, y_sativa)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+svc_sativa_cv = grid.best_score_
+
+#Cross validated predictions with best model
+best_svc = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_svc, X_full, y_sativa, cv=5)
+
+print("Confusion Matrix (CV):")
+cm_sativa_cv = confusion_matrix(y_sativa, y_pred_cv)
+print(cm_sativa_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_sativa_cv, display_labels=["Not Sativa", "Sativa"])
+disp.plot()
+plt.title("SVC OvR Confusion Matrix – Not Sativa vs Sativa (CV)")
+plt.show()
+
+#model on full data
+final_svc = best_svc
+final_svc.fit(X_full, y_sativa)
+final_pred = final_svc.predict(X_full)
+
+print("Final Accuracy (Sativa vs Not Sativa):", accuracy_score(y_sativa, final_pred))
+svc_sativa_final = accuracy_score(y_sativa, final_pred)
+
+cm_sativa_final = confusion_matrix(y_sativa, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_sativa_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_sativa_final,display_labels=["Not Sativa", "Sativa"])
+disp_final.plot()
+plt.title("SVC OvR Confusion Matrix – Not Sativa vs Sativa (Final)")
+plt.show()
+
+```
+
+*Hybrid vs. Not Hybrid*
+```{python}
+
+grid.fit(X_full, y_hybrid)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+svc_hybrid_cv = grid.best_score_
+
+#Cross validated predictions with best model
+best_svc = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_svc, X_full, y_hybrid, cv=5)
+
+print("Confusion Matrix (CV):")
+cm_hybrid_cv = confusion_matrix(y_hybrid, y_pred_cv)
+print(cm_hybrid_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_hybrid_cv, display_labels=["Not Hybrid", "Hybrid"])
+disp.plot()
+plt.title("SVC OvR Confusion Matrix – Not Hybrid vs Hybrid (CV)")
+plt.show()
+
+#model on full data
+final_svc = best_svc
+final_svc.fit(X_full, y_hybrid)
+final_pred = final_svc.predict(X_full)
+
+print("Final Accuracy (Hybrid vs Not Hybrid):", accuracy_score(y_hybrid, final_pred))
+svc_hybrid_final = accuracy_score(y_hybrid, final_pred)
+
+cm_hybrid_final = confusion_matrix(y_hybrid, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_hybrid_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_hybrid_final,display_labels=["Not Hybrid", "Hybrid"])
+disp_final.plot()
+plt.title("SVC OvR Confusion Matrix – Not Hybrid vs Hybrid (Final)")
+plt.show()
+
+```
+
+
+*Logistic Regression*
+*Indica vs. Not Indica*
+```{python}
+
+log3 = LogisticRegression()
+
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+grid = GridSearchCV(log3, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_full, y_indica)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+lr_indica_cv = grid.best_score_
+
+#Cross validated predictions with best model
+best_log = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_log, X_full, y_indica, cv=5)
+
+print("Confusion Matrix (CV):")
+cm_indica_cv = confusion_matrix(y_indica, y_pred_cv)
+print(cm_indica_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_indica_cv, display_labels=["Not Indica", "Indica"])
+disp.plot()
+plt.title("Logistic Regression OvR Confusion Matrix – Not Indica vs Indica (CV)")
+plt.show()
+
+#model on full data
+final_log = best_log
+final_log.fit(X_full, y_indica)
+final_pred = final_log.predict(X_full)
+
+print("Final Accuracy (Indica vs Not Indica):", accuracy_score(y_indica, final_pred))
+lr_indica_final = accuracy_score(y_indica, final_pred)
+
+cm_indica_final = confusion_matrix(y_indica, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_indica_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_indica_final,display_labels=["Not Indica", "Indica"])
+disp_final.plot()
+plt.title("Logistic Regression OvR Confusion Matrix – Not Indica vs Indica (Final)")
+plt.show()
+
+```
+
+*Sativa vs. Not Sativa*
+```{python}
+
+grid.fit(X_full, y_sativa)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+lr_sativa_cv = grid.best_score_
+
+#Cross validated predictions with best model
+best_log = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_log, X_full, y_sativa, cv=5)
+
+print("Confusion Matrix (CV):")
+cm_sativa_cv = confusion_matrix(y_sativa, y_pred_cv)
+print(cm_sativa_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_sativa_cv, display_labels=["Not Sativa", "Sativa"])
+disp.plot()
+plt.title("Logistic Regression OvR Confusion Matrix – Not Sativa vs Sativa (CV)")
+plt.show()
+
+#model on full data
+final_log = best_log
+final_log.fit(X_full, y_sativa)
+final_pred = final_log.predict(X_full)
+
+print("Final Accuracy (Sativa vs Not Sativa):", accuracy_score(y_sativa, final_pred))
+lr_sativa_final = accuracy_score(y_sativa, final_pred)
+
+cm_sativa_final = confusion_matrix(y_sativa, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_sativa_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_sativa_final,display_labels=["Not Sativa", "Sativa"])
+disp_final.plot()
+plt.title("Logistic Regression OvR Confusion Matrix – Not Sativa vs Sativa (Final)")
+plt.show()
+
+```
+
+*Hybrid vs. Not Hybrid*
+```{python}
+
+grid.fit(X_full, y_hybrid)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+lr_hybrid_cv = grid.best_score_
+
+#Cross validated predictions with best model
+best_log = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_log, X_full, y_hybrid, cv=5)
+
+print("Confusion Matrix (CV):")
+cm_hybrid_cv = confusion_matrix(y_hybrid, y_pred_cv)
+print(cm_hybrid_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_hybrid_cv, display_labels=["Not Hybrid", "Hybrid"])
+disp.plot()
+plt.title("Logistic Regression OvR Confusion Matrix – Not Hybrid vs Hybrid (CV)")
+plt.show()
+
+#model on full data
+final_log = best_log
+final_log.fit(X_full, y_hybrid)
+final_pred = final_log.predict(X_full)
+
+print("Final Accuracy (Hybrid vs Not Hybrid):", accuracy_score(y_hybrid, final_pred))
+lr_hybrid_final = accuracy_score(y_hybrid, final_pred)
+
+cm_hybrid_final = confusion_matrix(y_hybrid, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_hybrid_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_hybrid_final,display_labels=["Not Hybrid", "Hybrid"])
+disp_final.plot()
+plt.title("Logistic Regression OvR Confusion Matrix – Not Hybrid vs Hybrid (Final)")
+plt.show()
+
+```
+
+
+**Q2: Which of the six models did the best job distinguishing the target category from the rest? Which did the worst? Does this make intuitive sense?**
+```{python}
+
+ovr_results = pd.DataFrame({
+    "Model": [
+        "SVC – Indica vs Not Indica",
+        "SVC – Sativa vs Not Sativa",
+        "SVC – Hybrid vs Not Hybrid",
+        "LogReg – Indica vs Not Indica",
+        "LogReg – Sativa vs Not Sativa",
+        "LogReg – Hybrid vs Not Hybrid"
+    ],
+    "Best CV Accuracy": [
+        # From SVC OvR
+        svc_indica_cv,   # SVC Indica
+        svc_sativa_cv,   # SVC Sativa
+        svc_hybrid_cv,   # SVC Hybrid
+
+        # From Logistic Regression OvR
+        lr_indica_cv,   # LogReg Indica
+        lr_sativa_cv,   # LogReg Sativa
+        lr_hybrid_cv    # LogReg Hybrid
+    ],
+    "Final Accuracy": [
+        # Final SVC
+        svc_indica_final,   # SVC Indica final
+        svc_sativa_final,   # SVC Sativa final
+        svc_hybrid_final,   # SVC Hybrid final
+        
+        # Final Logistic Regression
+        lr_indica_final,   # LogReg Indica final
+        lr_sativa_final,   # LogReg Sativa final
+        lr_hybrid_final    # LogReg Hybrid final
+    ]
+})
+
+ovr_results
+
+```
+
+- The best performing model of these six models was the Logistic Regression(Sativa vs. Not Sativa) model with a cross validated model accuracy of 0.8282, while the SVC(Sativa vs. Not Sativa) was almost equally the best with a cross validated model accuracy of 0.8190. 
+- This makes sense as Sativa has easily distinctive attributes such as feelings user get like "energetic" or "uplifted". 
+- Additionally, Sativa is the smallest class, so in combination with its distintive features, when being treated as the distinguishing class, Sativa is much more easily classified. 
+
+- The worst performing model of these six models was the SVC(Hybrid vs. Not Hybrid) with a cross validated model accuracy of 0.624729, while the Logistic Regression(Hybrid vs. Not Hybrid) was almost equally the worst with a cross validated model accuracy of 0.6251.
+- This also makes sense as Hybrid attributes overlap heavily with attributes of both the Sativa and Indica classes, being that it is a mix of both strains. This makes decision boundaries fuzzy and difficult for the models to correctly classify.
+
+
+
+**Q3: Fit and report metrics for OvO versions of the models. That is, for each of the two model types, create three models:**
+
+*SVC*
+*Indica vs Sativa*
+```{python}
+
+X_ovo_ind_svc = cc_full[cc_full["Type"].isin(["indica", "sativa"])].drop(columns=["Type"])
+y_ovo_ind_svc = cc_full[cc_full["Type"].isin(["indica", "sativa"])]["Type"]
+
+y_ovo_ind_svc = (y_ovo_ind_svc == "indica").astype(int)
+
+# Parameter grid
+
+svc_ovo = SVC(kernel="linear")
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+# Grid search CV
+
+grid = GridSearchCV(svc_ovo, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_ovo_ind_svc, y_ovo_ind_svc)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+
+svc_indica_vs_sativa_cv = grid.best_score_
+
+#Cross validated predictions
+best_svc = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_svc, X_ovo_ind_svc, y_ovo_ind_svc, cv=5)
+
+print("\nConfusion Matrix (CV):")
+cm_ind_svc_cv = confusion_matrix(y_ovo_ind_svc, y_pred_cv)
+print(cm_ind_svc_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_ind_svc_cv,
+display_labels=["Sativa", "Indica"])
+disp.plot()
+plt.title("SVC OvO Confusion Matrix – Indica vs Sativa (CV)")
+plt.show()
+
+# Final model on full subset
+
+final_svc = best_svc
+final_svc.fit(X_ovo_ind_svc, y_ovo_ind_svc)
+final_pred = final_svc.predict(X_ovo_ind_svc)
+
+print("Final Accuracy (Indica vs Sativa):", accuracy_score(y_ovo_ind_svc, final_pred))
+svc_indica_vs_sativa_final = accuracy_score(y_ovo_ind_svc, final_pred)
+
+cm_ind_svc_final = confusion_matrix(y_ovo_ind_svc, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_ind_svc_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_ind_svc_final,
+display_labels=["Sativa", "Indica"])
+disp_final.plot()
+plt.title("SVC OvO Confusion Matrix – Indica vs Sativa (Final)")
+plt.show()
+
+```
+
+*Indica vs Hybrid*
+```{python}
+
+X_ovo_hyb_svc = cc_full[cc_full["Type"].isin(["indica", "hybrid"])].drop(columns=["Type"])
+y_ovo_hyb_svc = cc_full[cc_full["Type"].isin(["indica", "hybrid"])]["Type"]
+
+y_ovo_hyb_svc = (y_ovo_hyb_svc == "indica").astype(int)
+
+# Parameter grid
+
+svc_ovo = SVC(kernel="linear")
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+# Grid search CV
+
+grid = GridSearchCV(svc_ovo, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_ovo_hyb_svc, y_ovo_hyb_svc)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+
+svc_indica_vs_hybrid_cv = grid.best_score_
+
+#Cross validated predictions
+best_svc = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_svc, X_ovo_hyb_svc, y_ovo_hyb_svc, cv=5)
+
+print("\nConfusion Matrix (CV):")
+cm_hyb_svc_cv = confusion_matrix(y_ovo_hyb_svc, y_pred_cv)
+print(cm_hyb_svc_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_hyb_svc_cv,
+display_labels=["Hybrid", "Indica"])
+disp.plot()
+plt.title("SVC OvO Confusion Matrix – Indica vs Hybrid (CV)")
+plt.show()
+
+# Final model on full subset
+
+final_svc = best_svc
+final_svc.fit(X_ovo_hyb_svc, y_ovo_hyb_svc)
+final_pred = final_svc.predict(X_ovo_hyb_svc)
+
+print("Final Accuracy (Indica vs Hybrid):", accuracy_score(y_ovo_hyb_svc, final_pred))
+svc_indica_vs_hybrid_final = accuracy_score(y_ovo_hyb_svc, final_pred)
+
+cm_hyb_svc_final = confusion_matrix(y_ovo_hyb_svc, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_hyb_svc_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_hyb_svc_final,
+display_labels=["Hybrid", "Indica"])
+disp_final.plot()
+plt.title("SVC OvO Confusion Matrix – Indica vs Hybrid (Final)")
+plt.show()
+
+```
+
+*Hybrid vs Sativa*
+```{python}
+
+X_ovo_sat_svc = cc_full[cc_full["Type"].isin(["hybrid", "sativa"])].drop(columns=["Type"])
+y_ovo_sat_svc = cc_full[cc_full["Type"].isin(["hybrid", "sativa"])]["Type"]
+
+y_ovo_sat_svc = (y_ovo_sat_svc == "hybrid").astype(int)
+
+# Parameter grid
+
+svc_ovo = SVC(kernel="linear")
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+# Grid search CV
+
+grid = GridSearchCV(svc_ovo, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_ovo_sat_svc, y_ovo_sat_svc)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+
+svc_hybrid_vs_sativa_cv = grid.best_score_
+
+#Cross validated predictions
+best_svc = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_svc, X_ovo_sat_svc, y_ovo_sat_svc, cv=5)
+
+print("\nConfusion Matrix (CV):")
+cm_sat_svc_cv = confusion_matrix(y_ovo_sat_svc, y_pred_cv)
+print(cm_sat_svc_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_sat_svc_cv,
+display_labels=["Sativa", "Hybrid"])
+disp.plot()
+plt.title("SVC OvO Confusion Matrix – Hybrid vs Sativa (CV)")
+plt.show()
+
+# Final model on full subset
+
+final_svc = best_svc
+final_svc.fit(X_ovo_sat_svc, y_ovo_sat_svc)
+final_pred = final_svc.predict(X_ovo_sat_svc)
+
+print("Final Accuracy (Hybrid vs Sativa):", accuracy_score(y_ovo_sat_svc, final_pred))
+svc_hybrid_vs_sativa_final = accuracy_score(y_ovo_sat_svc, final_pred)
+
+cm_sat_svc_final = confusion_matrix(y_ovo_sat_svc, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_sat_svc_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_sat_svc_final,
+display_labels=["Sativa", "Hybrid"])
+disp_final.plot()
+plt.title("SVC OvO Confusion Matrix – Hybrid vs Sativa (Final)")
+plt.show()
+
+```
+
+*Logistic Regression*
+*Indica vs Sativa*
+```{python}
+
+X_ovo_ind_log = cc_full[cc_full["Type"].isin(["indica", "sativa"])].drop(columns=["Type"])
+y_ovo_ind_log = cc_full[cc_full["Type"].isin(["indica", "sativa"])]["Type"]
+
+y_ovo_ind_log = (y_ovo_ind_log == "indica").astype(int)
+
+# Parameter grid
+
+log_ovo = LogisticRegression()
+
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+# Grid search CV
+
+grid = GridSearchCV(log_ovo, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_ovo_ind_log, y_ovo_ind_log)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+
+log_indica_vs_sativa_cv = grid.best_score_
+
+#Cross validated predictions
+best_log = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_log, X_ovo_ind_log, y_ovo_ind_log, cv=5)
+
+print("\nConfusion Matrix (CV):")
+cm_ind_log_cv = confusion_matrix(y_ovo_ind_log, y_pred_cv)
+print(cm_ind_log_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_ind_log_cv,
+display_labels=["Sativa", "Indica"])
+disp.plot()
+plt.title("Logistic Regression OvO Confusion Matrix – Indica vs Sativa (CV)")
+plt.show()
+
+# Final model on full subset
+
+final_log = best_log
+final_log.fit(X_ovo_ind_log, y_ovo_ind_log)
+final_pred = final_log.predict(X_ovo_ind_log)
+
+print("Final Accuracy (Indica vs Sativa):", accuracy_score(y_ovo_ind_log, final_pred))
+log_indica_vs_sativa_final = accuracy_score(y_ovo_ind_log, final_pred)
+
+cm_ind_log_final = confusion_matrix(y_ovo_ind_log, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_ind_log_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_ind_log_final,
+display_labels=["Sativa", "Indica"])
+disp_final.plot()
+plt.title("Logistic Regression OvO Confusion Matrix – Indica vs Sativa (Final)")
+plt.show()
+
+```
+
+*Indica vs Hybrid*
+```{python}
+
+X_ovo_hyb_log = cc_full[cc_full["Type"].isin(["indica", "hybrid"])].drop(columns=["Type"])
+y_ovo_hyb_log = cc_full[cc_full["Type"].isin(["indica", "hybrid"])]["Type"]
+
+y_ovo_hyb_log = (y_ovo_hyb_log == "indica").astype(int)
+
+# Parameter grid
+
+log_ovo = LogisticRegression()
+
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+# Grid search CV
+
+grid = GridSearchCV(log_ovo, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_ovo_hyb_log, y_ovo_hyb_log)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+
+log_indica_vs_hybrid_cv = grid.best_score_
+
+#Cross validated predictions
+best_log = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_log, X_ovo_hyb_log, y_ovo_hyb_log, cv=5)
+
+print("\nConfusion Matrix (CV):")
+cm_hyb_log_cv = confusion_matrix(y_ovo_hyb_log, y_pred_cv)
+print(cm_hyb_log_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_hyb_log_cv,
+display_labels=["Hybrid", "Indica"])
+disp.plot()
+plt.title("Logistic Regression OvO Confusion Matrix – Indica vs Hybrid (CV)")
+plt.show()
+
+# Final model on full subset
+
+final_log = best_log
+final_log.fit(X_ovo_hyb_log, y_ovo_hyb_log)
+final_pred = final_log.predict(X_ovo_hyb_log)
+
+print("Final Accuracy (Indica vs Hybrid):", accuracy_score(y_ovo_hyb_log, final_pred))
+log_indica_vs_hybrid_final = accuracy_score(y_ovo_hyb_log, final_pred)
+
+cm_hyb_log_final = confusion_matrix(y_ovo_hyb_log, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_hyb_log_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_hyb_log_final,
+display_labels=["Hybrid", "Indica"])
+disp_final.plot()
+plt.title("Logistic Regression OvO Confusion Matrix – Indica vs Hybrid (Final)")
+plt.show()
+
+```
+
+*Hybrid vs Sativa*
+```{python}
+
+X_ovo_sat_log = cc_full[cc_full["Type"].isin(["hybrid", "sativa"])].drop(columns=["Type"])
+y_ovo_sat_log = cc_full[cc_full["Type"].isin(["hybrid", "sativa"])]["Type"]
+
+y_ovo_sat_log = (y_ovo_sat_log == "hybrid").astype(int)
+
+# Parameter grid
+
+log_ovo = LogisticRegression()
+
+param_grid = {"C": [0.01, 0.1, 1, 5, 10]}
+
+# Grid search CV
+
+grid = GridSearchCV(log_ovo, param_grid, cv=5, scoring="accuracy")
+grid.fit(X_ovo_sat_log, y_ovo_sat_log)
+
+print("Best C:", grid.best_params_)
+print("Best CV Accuracy:", grid.best_score_)
+
+log_hybrid_vs_sativa_cv = grid.best_score_
+
+#Cross validated predictions
+best_log = grid.best_estimator_
+y_pred_cv = cross_val_predict(best_log, X_ovo_sat_log, y_ovo_sat_log, cv=5)
+
+print("\nConfusion Matrix (CV):")
+cm_sat_log_cv = confusion_matrix(y_ovo_sat_log, y_pred_cv)
+print(cm_sat_log_cv)
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm_sat_log_cv,
+display_labels=["Sativa", "Hybrid"])
+disp.plot()
+plt.title("Logistic Regression OvO Confusion Matrix – Hybrid vs Sativa (CV)")
+plt.show()
+
+# Final model on full subset
+
+final_log = best_log
+final_log.fit(X_ovo_sat_log, y_ovo_sat_log)
+final_pred = final_log.predict(X_ovo_sat_log)
+
+print("Final Accuracy (Hybrid vs Sativa):", accuracy_score(y_ovo_sat_log, final_pred))
+log_hybrid_vs_sativa_final = accuracy_score(y_ovo_sat_log, final_pred)
+
+cm_sat_log_final = confusion_matrix(y_ovo_sat_log, final_pred)
+print("Confusion Matrix (Final Model):")
+print(cm_sat_log_final)
+
+disp_final = ConfusionMatrixDisplay(confusion_matrix=cm_sat_log_final,
+display_labels=["Sativa", "Hybrid"])
+disp_final.plot()
+plt.title("Logistic Regression OvO Confusion Matrix – Hybrid vs Sativa (Final)")
+plt.show()
+
+```
+
+
+**Q4: Which of the six models did the best job distinguishing at differentiating the two groups? Which did the worst? Does this make intuitive sense?**
+```{python}
+
+ovo_results = pd.DataFrame({
+    "Model": [
+        "SVC – Indica vs Sativa",
+        "SVC – Indica vs Hybrid",
+        "SVC – Hybrid vs Sativa",
+        "LogReg – Indica vs Sativa",
+        "LogReg – Indica vs Hybrid",
+        "LogReg – Hybrid vs Sativa"
+    ],
+    "Best CV Accuracy": [
+        svc_indica_vs_sativa_cv,
+        svc_indica_vs_hybrid_cv,
+        svc_hybrid_vs_sativa_cv,
+        log_indica_vs_sativa_cv,
+        log_indica_vs_hybrid_cv,
+        log_hybrid_vs_sativa_cv
+    ],
+    "Final Accuracy": [
+        svc_indica_vs_sativa_final,
+        svc_indica_vs_hybrid_final,
+        svc_hybrid_vs_sativa_final,
+        log_indica_vs_sativa_final,
+        log_indica_vs_hybrid_final,
+        log_hybrid_vs_sativa_final
+    ]
+}); ovo_results
+
+```
+
+- The best performing model of these six models was the Logistic Regression(Indica vs. Sativa) model with a cross validated model accuracy of 0.8551, while the SVC(Indica vs. Sativa) was almost equally the best with a cross validated model accuracy of 0.8524. 
+- This result makes intuitive sense because Indica and Sativa are the two most distinct strain categories. Their effects tend to be more polarized, and therefore they produce clearer and more separable patterns in the effect/flavor dummy variables.
+- Since OvO isolates just these two classes, the models do not have to account for the Hybrid strains, which normally blur the boundary between Indica and Sativa. With that problem removed, both the linear SVC and Logistic Regression can find strong separating boundaries.
+
+- The worst performing model of these six models was the SVC(Hybrid vs. Sativa) with a cross validated model accuracy of 0.7503, while the Logistic Regression(Hybrid vs. Sativa) was almost equally the worst with a cross validated model accuracy of 0.7522.
+- This also makes sense because Hybrid strains overlap heavily with both Indica and Sativa, making them difficult to separate from either category in a pairwise comparison. In the Hybrid vs Sativa case, Hybrid strains often share several Sativa-like descriptors (like “uplifted”, “creative”, "energetic"), but not consistently enough to create a clean decision boundary.
+- Due to this, distinguishing Hybrid from Sativa is more challenging, producing the lowest OvO performance across models.
+
+
+**Q5: Suppose you had simply input the full data, with three classes, into the LogisticRegression function. Would this have automatically taken an “OvO” approach or an “OvR” approach? What about for SVC?**
+
+- If I had chosen to simply input the dataset with all three classes(multiclass data) into Logistic Regression, it would have automatically used the "OvR" approach. 
+- If I had chosen to simply input the dataset with all three clases(multiclass data) into SVC, it would have automatically used the "OvO" approach.
